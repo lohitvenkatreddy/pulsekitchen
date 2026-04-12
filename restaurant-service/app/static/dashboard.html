@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>POP Restaurant Dashboard</title>
+    <style>
+      :root {
+        --bg: #f7f2ea;
+        --panel: rgba(255, 253, 248, 0.95);
+        --ink: #1f2933;
+        --muted: #66788a;
+        --accent: #c55a34;
+        --accent-dark: #994426;
+        --border: #eadfce;
+        --ok: #2f855a;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", system-ui, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top right, rgba(197, 90, 52, 0.18), transparent 28%),
+          linear-gradient(180deg, #fbf7f0 0%, var(--bg) 100%);
+      }
+      .shell {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .grid {
+        display: grid;
+        gap: 18px;
+      }
+      .hero {
+        grid-template-columns: 1.1fr 0.9fr;
+      }
+      .main {
+        grid-template-columns: 0.9fr 1.1fr;
+        margin-top: 18px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 22px;
+        box-shadow: 0 12px 34px rgba(31, 41, 51, 0.06);
+      }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 2rem; }
+      .muted { color: var(--muted); }
+      .auth-row, .form-grid, .menu-form {
+        display: grid;
+        gap: 12px;
+      }
+      .auth-row {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        margin-top: 18px;
+      }
+      .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-top: 18px;
+      }
+      .menu-form {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: 16px;
+      }
+      input, textarea, select, button {
+        width: 100%;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        padding: 12px 14px;
+        font: inherit;
+      }
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+      button {
+        border: none;
+        background: var(--accent);
+        color: white;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button:hover { background: var(--accent-dark); }
+      button.secondary {
+        background: #eadfce;
+        color: var(--ink);
+      }
+      .toolbar {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+      }
+      .status {
+        margin-top: 12px;
+        min-height: 20px;
+        color: var(--muted);
+      }
+      .restaurant-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 18px;
+      }
+      .restaurant-card {
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 14px;
+        cursor: pointer;
+        background: #fff;
+      }
+      .restaurant-card.active {
+        border-color: var(--accent);
+        background: #fff6f1;
+      }
+      .badge {
+        display: inline-block;
+        margin-top: 8px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #e6f5eb;
+        color: var(--ok);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+      }
+      th, td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        color: var(--muted);
+        font-weight: 700;
+      }
+      .stack {
+        display: grid;
+        gap: 16px;
+      }
+      @media (max-width: 960px) {
+        .hero, .main, .form-grid, .menu-form {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="grid hero">
+        <section class="panel">
+          <h1>POP Restaurant Console</h1>
+          <p class="muted" style="margin-top: 8px;">
+            Sign in as a restaurant owner to manage your profile, visibility, and menu items.
+          </p>
+          <div class="auth-row">
+            <input id="gatewayUrl" />
+            <input id="email" placeholder="Restaurant email" />
+            <input id="password" type="password" placeholder="Password" />
+            <button id="loginBtn">Sign In</button>
+          </div>
+          <div class="toolbar">
+            <button class="secondary" id="refreshBtn">Refresh</button>
+          </div>
+          <div class="status" id="statusText">Sign in to load your restaurant workspace.</div>
+        </section>
+        <section class="panel">
+          <h2>Your Restaurants</h2>
+          <div id="restaurantList" class="restaurant-list"></div>
+        </section>
+      </div>
+
+      <div class="grid main">
+        <section class="panel">
+          <h2>Restaurant Profile</h2>
+          <div class="form-grid">
+            <input id="name" placeholder="Restaurant name" />
+            <input id="cuisine" placeholder="Cuisine" />
+            <textarea id="address" placeholder="Address"></textarea>
+            <div class="stack">
+              <input id="latitude" placeholder="Latitude" />
+              <input id="longitude" placeholder="Longitude" />
+              <label><input type="checkbox" id="isOpen" style="width:auto;" /> Open for orders</label>
+              <label><input type="checkbox" id="isPublic" style="width:auto;" /> Visible to customers</label>
+            </div>
+          </div>
+          <div class="toolbar">
+            <button id="saveProfileBtn">Save Profile</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Menu Manager</h2>
+          <div class="menu-form">
+            <input id="menuName" placeholder="Item name" />
+            <input id="menuDescription" placeholder="Description" />
+            <input id="menuPrice" type="number" step="0.01" placeholder="Price" />
+            <button id="addMenuBtn">Add Item</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Description</th>
+                <th>Price</th>
+                <th>Available</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="menuTable"></tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      let authToken = "";
+      let selectedRestaurant = null;
+      const defaultGatewayUrl =
+        window.location.port === "8000"
+          ? `${window.location.origin}/api/v1`
+          : `${window.location.protocol}//${window.location.hostname}:8000/api/v1`;
+
+      const refs = {
+        gatewayUrl: document.getElementById("gatewayUrl"),
+        email: document.getElementById("email"),
+        password: document.getElementById("password"),
+        loginBtn: document.getElementById("loginBtn"),
+        refreshBtn: document.getElementById("refreshBtn"),
+        statusText: document.getElementById("statusText"),
+        restaurantList: document.getElementById("restaurantList"),
+        menuTable: document.getElementById("menuTable"),
+        saveProfileBtn: document.getElementById("saveProfileBtn"),
+        addMenuBtn: document.getElementById("addMenuBtn"),
+        name: document.getElementById("name"),
+        cuisine: document.getElementById("cuisine"),
+        address: document.getElementById("address"),
+        latitude: document.getElementById("latitude"),
+        longitude: document.getElementById("longitude"),
+        isOpen: document.getElementById("isOpen"),
+        isPublic: document.getElementById("isPublic"),
+        menuName: document.getElementById("menuName"),
+        menuDescription: document.getElementById("menuDescription"),
+        menuPrice: document.getElementById("menuPrice"),
+      };
+
+      refs.gatewayUrl.value = defaultGatewayUrl;
+
+      function setStatus(message) {
+        refs.statusText.textContent = message;
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(`${refs.gatewayUrl.value}${path}`, {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+            ...(options.headers || {}),
+          },
+        });
+
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(body || `Request failed: ${response.status}`);
+        }
+
+        if (response.status === 204) {
+          return null;
+        }
+
+        return response.json();
+      }
+
+      async function loginImpl() {
+        setStatus("Signing in...");
+        const payload = await api("/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            email: refs.email.value,
+            password: refs.password.value,
+          }),
+        });
+        authToken = payload.access_token;
+        await loadRestaurantsImpl();
+      }
+
+      async function loadRestaurantsImpl() {
+        const restaurants = await api("/restaurants/partner/mine");
+        renderRestaurants(restaurants);
+        if (restaurants.length > 0) {
+          await selectRestaurantImpl(restaurants[0].id);
+        } else {
+          selectedRestaurant = null;
+          refs.menuTable.innerHTML = "";
+          setStatus("No restaurants linked to this account yet.");
+        }
+      }
+
+      function renderRestaurants(restaurants) {
+        refs.restaurantList.innerHTML = restaurants.map((restaurant) => `
+          <div class="restaurant-card ${selectedRestaurant && selectedRestaurant.id === restaurant.id ? "active" : ""}" onclick="window.selectRestaurant(${restaurant.id})">
+            <strong>${restaurant.name}</strong>
+            <div class="muted" style="margin-top: 6px;">${restaurant.address}</div>
+            <div class="badge">${restaurant.approval_status || "approved"}</div>
+          </div>
+        `).join("");
+      }
+
+      async function selectRestaurantImpl(id) {
+        const restaurant = await api(`/restaurants/${id}`);
+        const menu = await api(`/restaurants/${id}/menu`);
+        selectedRestaurant = restaurant;
+        populateProfile(restaurant);
+        renderMenu(menu);
+        const restaurants = await api("/restaurants/partner/mine");
+        renderRestaurants(restaurants);
+        setStatus(`Loaded ${restaurant.name}.`);
+      }
+
+      function populateProfile(restaurant) {
+        refs.name.value = restaurant.name || "";
+        refs.cuisine.value = restaurant.cuisine_type || "";
+        refs.address.value = restaurant.address || "";
+        refs.latitude.value = restaurant.latitude ?? "";
+        refs.longitude.value = restaurant.longitude ?? "";
+        refs.isOpen.checked = !!restaurant.is_open;
+        refs.isPublic.checked = !!restaurant.is_public;
+      }
+
+      function renderMenu(menuItems) {
+        refs.menuTable.innerHTML = menuItems.map((item) => `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.description || "-"}</td>
+            <td>$${Number(item.price).toFixed(2)}</td>
+            <td>${item.is_available ? "Yes" : "No"}</td>
+            <td>
+              <button class="secondary" onclick="toggleAvailability(${item.id}, ${item.is_available ? "false" : "true"})">Toggle</button>
+              <button onclick="removeItem(${item.id})" style="margin-top:8px;">Delete</button>
+            </td>
+          </tr>
+        `).join("");
+      }
+
+      async function saveProfileImpl() {
+        if (!selectedRestaurant) {
+          throw new Error("Select a restaurant first.");
+        }
+        await api(`/restaurants/partner/${selectedRestaurant.id}/profile`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            name: refs.name.value,
+            cuisine_type: refs.cuisine.value,
+            address: refs.address.value,
+            latitude: refs.latitude.value ? Number(refs.latitude.value) : null,
+            longitude: refs.longitude.value ? Number(refs.longitude.value) : null,
+            is_open: refs.isOpen.checked,
+            is_public: refs.isPublic.checked,
+          }),
+        });
+        await selectRestaurantImpl(selectedRestaurant.id);
+      }
+
+      async function addMenuItemImpl() {
+        if (!selectedRestaurant) {
+          throw new Error("Select a restaurant first.");
+        }
+        await api(`/restaurants/partner/${selectedRestaurant.id}/menu/items`, {
+          method: "POST",
+          body: JSON.stringify({
+            name: refs.menuName.value,
+            description: refs.menuDescription.value,
+            price: Number(refs.menuPrice.value),
+            is_available: true,
+          }),
+        });
+        refs.menuName.value = "";
+        refs.menuDescription.value = "";
+        refs.menuPrice.value = "";
+        await selectRestaurantImpl(selectedRestaurant.id);
+      }
+
+      async function toggleAvailabilityImpl(itemId, nextValue) {
+        await api(`/restaurants/partner/${selectedRestaurant.id}/menu/items/${itemId}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            is_available: nextValue === true || nextValue === "true",
+          }),
+        });
+        await selectRestaurantImpl(selectedRestaurant.id);
+      }
+
+      async function removeItemImpl(itemId) {
+        await api(`/restaurants/partner/${selectedRestaurant.id}/menu/items/${itemId}`, {
+          method: "DELETE",
+        });
+        await selectRestaurantImpl(selectedRestaurant.id);
+      }
+
+      refs.loginBtn.addEventListener("click", () => loginImpl().catch((error) => setStatus(error.message)));
+      refs.refreshBtn.addEventListener("click", () => loadRestaurantsImpl().catch((error) => setStatus(error.message)));
+      refs.saveProfileBtn.addEventListener("click", () => saveProfileImpl().then(() => setStatus("Profile saved.")).catch((error) => setStatus(error.message)));
+      refs.addMenuBtn.addEventListener("click", () => addMenuItemImpl().then(() => setStatus("Menu item added.")).catch((error) => setStatus(error.message)));
+
+      window.selectRestaurant = (id) => selectRestaurantImpl(id).catch((error) => setStatus(error.message));
+      window.toggleAvailability = (itemId, nextValue) => toggleAvailabilityImpl(itemId, nextValue).catch((error) => setStatus(error.message));
+      window.removeItem = (itemId) => removeItemImpl(itemId).catch((error) => setStatus(error.message));
+    </script>
+  </body>
+</html>

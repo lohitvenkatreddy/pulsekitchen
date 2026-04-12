@@ -1,0 +1,17 @@
+from pydantic_settings import BaseSettings
+from functools import lru_cache
+
+
+class Settings(BaseSettings):
+    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/food_delivery"
+    REDIS_URL: str = "redis://localhost:6379"
+    JWT_SECRET_KEY: str = "your-super-secret-jwt-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+
+    class Config:
+        env_file = ".env"
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()
