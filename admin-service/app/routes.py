@@ -112,7 +112,10 @@ def stats_overview(
 
 @router.get("/dashboard", include_in_schema=False)
 def admin_dashboard():
-    return FileResponse(STATIC_DIR / "dashboard.html")
+    return FileResponse(
+        STATIC_DIR / "dashboard.html",
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @router.get("/users")

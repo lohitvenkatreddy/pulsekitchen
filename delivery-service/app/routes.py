@@ -163,7 +163,10 @@ def _eta_payload_for_order(order: models.Order, eta_data: dict, partner=None) ->
 
 @router.get("/dashboard", include_in_schema=False)
 def delivery_dashboard():
-    return FileResponse(STATIC_DIR / "dashboard.html")
+    return FileResponse(
+        STATIC_DIR / "dashboard.html",
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @router.get("/partners", response_model=List[PartnerResponse])

@@ -21,10 +21,6 @@ const dashboardSources = [
   },
 ];
 
-if (!gatewayUrl) {
-  throw new Error("API_GATEWAY_URL is required, for example https://pulsekitchen-api.onrender.com");
-}
-
 for (const dashboard of dashboardSources) {
   await cp(dashboard.from, dashboard.to);
 }
@@ -34,7 +30,7 @@ await mkdir(dist, { recursive: true });
 await cp(src, dist, { recursive: true });
 await writeFile(
   resolve(dist, "config.js"),
-  `window.PULSEKITCHEN_API_BASE_URL = ${JSON.stringify(`${gatewayUrl}/api/v1`)};\n`
+  'window.PULSEKITCHEN_API_BASE_URL = "/api/v1";\n'
 );
 
 for (const fileName of ["admin.html", "restaurant.html", "delivery.html"]) {
@@ -50,8 +46,12 @@ const redirects = [
   "/admin /admin.html 200",
   "/restaurant /restaurant.html 200",
   "/delivery /delivery.html 200",
-  `/api/v1/* ${gatewayUrl}/api/v1/:splat 200`,
-  `/health ${gatewayUrl}/health 200`,
+  ...(gatewayUrl
+    ? [
+        `/api/v1/* ${gatewayUrl}/api/v1/:splat 200`,
+        `/health ${gatewayUrl}/health 200`,
+      ]
+    : []),
   "/* /index.html 200",
 ].join("\n");
 

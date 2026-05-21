@@ -34,7 +34,10 @@ def _get_restaurant_for_actor(
 
 @router.get("/dashboard", include_in_schema=False)
 def restaurant_dashboard():
-    return FileResponse(STATIC_DIR / "dashboard.html")
+    return FileResponse(
+        STATIC_DIR / "dashboard.html",
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
 
 
 @router.get("/mine", response_model=list[schemas.RestaurantSummaryExtended])
