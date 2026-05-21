@@ -244,13 +244,15 @@ export default function CartScreen({ navigation }) {
     ]).start();
 
     const navigationTimer = setTimeout(() => {
-      navigation.replace('OrderTracking', { orderId: successState.orderId });
+      dispatch(clearCart());
+      navigation.replace('OrderConfirmation', { orderId: successState.orderId });
     }, 2100);
 
     return () => clearTimeout(navigationTimer);
   }, [
     successState,
     navigation,
+    dispatch,
     overlayOpacity,
     cardScale,
     checkScale,
@@ -354,7 +356,6 @@ export default function CartScreen({ navigation }) {
           ? result.priority_score.toFixed(1)
           : String(result.priority_score ?? '');
       const level = String(result.priority_level ?? '');
-      dispatch(clearCart());
       setSuccessState({
         orderId: result.id,
         level,
@@ -946,7 +947,7 @@ export default function CartScreen({ navigation }) {
 
             <Text style={styles.successTitle}>Order placed!</Text>
             <Text style={styles.successSubtitle}>
-              Your kitchen is firing up the order and we&apos;re lining up delivery now.
+              Your kitchen is firing up the order and we are lining up delivery now.
             </Text>
 
             <View style={styles.successMetaRow}>
@@ -960,7 +961,7 @@ export default function CartScreen({ navigation }) {
               </View>
             </View>
 
-            <Text style={styles.successFootnote}>Opening live order tracking...</Text>
+            <Text style={styles.successFootnote}>Opening order confirmation...</Text>
           </Animated.View>
         </Animated.View>
       )}

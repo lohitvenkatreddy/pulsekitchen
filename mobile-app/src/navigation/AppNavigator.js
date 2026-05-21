@@ -10,6 +10,7 @@ import HomeScreen from '../screens/HomeScreen';
 import RestaurantDetailScreen from '../screens/RestaurantDetailScreen';
 import CartScreen from '../screens/CartScreen';
 import OrderTrackingScreen from '../screens/OrderTrackingScreen';
+import OrderConfirmationScreen from '../screens/OrderConfirmationScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OrdersHistoryScreen from '../screens/OrdersHistoryScreen';
 import SavedAddressesScreen from '../screens/SavedAddressesScreen';
@@ -48,6 +49,7 @@ const AppNavigator = () => {
         <>
           <Stack.Screen name="Main" component={HomeTabs} />
           <Stack.Screen name="RestaurantDetail" component={RestaurantDetailScreen} />
+          <Stack.Screen name="OrderConfirmation" component={OrderConfirmationScreen} />
           <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
           <Stack.Screen name="OrdersHistory" component={OrdersHistoryScreen} />
           <Stack.Screen name="SavedAddresses" component={SavedAddressesScreen} />
