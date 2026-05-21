@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useDispatch, useSelector } from 'react-redux';
-import { cancelOrder, createOrder } from '../store/slices/orderSlice';
+import { createOrder } from '../store/slices/orderSlice';
 import { clearCart, updateCartItemQuantity } from '../store/slices/cartSlice';
 import { fetchAddresses } from '../store/slices/userAddressesSlice';
 import { fetchPaymentMethods } from '../store/slices/paymentMethodsSlice';
@@ -339,28 +339,32 @@ export default function CartScreen({ navigation }) {
       };
 
       const result = await dispatch(createOrder(orderData)).unwrap();
-      try {
-        await paymentService.processPayment({
-          order_id: result.id,
-          user_id: user.id,
-          amount: subtotal + deliveryFee,
-          payment_method: selectedPaymentMethod.method_type || 'card',
-          priority_type: selectedPriority,
-        });
-      } catch (paymentError) {
-        await dispatch(cancelOrder(result.id)).unwrap().catch(() => null);
-        throw paymentError;
-      }
       const score =
         typeof result.priority_score === 'number'
           ? result.priority_score.toFixed(1)
           : String(result.priority_score ?? '');
       const level = String(result.priority_level ?? '');
+
       setSuccessState({
         orderId: result.id,
         level,
         score,
       });
+
+      paymentService
+        .processPayment({
+          order_id: result.id,
+          user_id: user.id,
+          amount: subtotal + deliveryFee,
+          payment_method: selectedPaymentMethod.method_type || 'card',
+          priority_type: selectedPriority,
+        })
+        .catch((paymentError) => {
+          console.warn(
+            '[Checkout] Payment processing did not finish before confirmation:',
+            paymentError?.message || paymentError
+          );
+        });
     } catch (err) {
       const message =
         typeof err === 'string'

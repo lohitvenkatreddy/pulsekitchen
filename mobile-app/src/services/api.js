@@ -107,7 +107,7 @@ api.interceptors.response.use(
         `[API Error] ${error.config?.method?.toUpperCase()} ${error.config?.url} - ${error.response.status}: ${error.response.data?.detail || error.message}`
       );
     } else if (error.request) {
-      console.error(`[API Error] No response received: ${error.message}`);
+      console.warn(`[API Error] No response received: ${error.message}`);
     } else {
       console.error(`[API Error] ${error.message}`);
     }
