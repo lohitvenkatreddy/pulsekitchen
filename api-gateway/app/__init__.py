@@ -112,6 +112,7 @@ async def proxy_to_service(request: Request, full_path: str):
                 url,
                 headers=headers,
                 content=body if body else None,
+                follow_redirects=True,
             )
         except httpx.RequestError as exc:
             return JSONResponse(

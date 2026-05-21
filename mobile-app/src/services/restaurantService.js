@@ -3,7 +3,7 @@ import api from './api';
 const restaurantService = {
   getRestaurants: async (filters = {}) => {
     const params = new URLSearchParams(filters).toString();
-    const response = await api.get(`/restaurants/${params ? `?${params}` : ''}`);
+    const response = await api.get(`/restaurants${params ? `?${params}` : ''}`);
     return response;
   },
 

@@ -14,7 +14,7 @@ const orderService = {
    */
   createOrder: async (orderData) => {
     try {
-      const response = await api.post('/orders/', orderData);
+      const response = await api.post('/orders', orderData);
       return response;
     } catch (error) {
       throw error;
@@ -101,7 +101,7 @@ const orderService = {
     try {
       // Calculate skip based on page number (page 1 = skip 0, page 2 = skip 10, etc.)
       const skip = (page - 1) * limit;
-      const response = await api.get('/orders/', {
+      const response = await api.get('/orders', {
         params: {
           skip,
           limit,

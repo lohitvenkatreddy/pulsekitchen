@@ -215,7 +215,9 @@ describe('addressService', () => {
 
       const result = await addressService.setDefaultAddress(addressId);
 
-      expect(apiClient.patch).toHaveBeenCalledWith(`/users/me/addresses/${addressId}/set-default`);
+      expect(apiClient.patch).toHaveBeenCalledWith(`/users/me/addresses/${addressId}`, {
+        is_default: true,
+      });
       expect(result.data).toEqual(mockResponse);
     });
 

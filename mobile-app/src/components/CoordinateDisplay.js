@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export default function CoordinateDisplay({ coordinates }) {
   const displayText = coordinates
     ? coordinates.place?.name || coordinates.place?.formattedAddress || 'Finding place name...'
-    : 'Tap on the map to select a location';
+    : 'Choose your current location or enter coordinates';
 
   return (
     <View style={styles.container}>

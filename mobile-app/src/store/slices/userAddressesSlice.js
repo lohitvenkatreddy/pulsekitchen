@@ -44,6 +44,20 @@ const toBackendFields = (addressData) => ({
   is_default: addressData.is_default || false,
 });
 
+const normalizeAddress = (address) => ({
+  ...address,
+  street_address_1: address.street_address_1 || address.line1 || '',
+  street_address_2: address.street_address_2 || address.line2 || '',
+  region_state: address.region_state || address.region || '',
+});
+
+const normalizeAddressList = (payload) => {
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+  return payload.map(normalizeAddress);
+};
+
 /**
  * Extract a string error message from a backend error response
  */
@@ -67,7 +81,7 @@ export const fetchAddresses = createAsyncThunk(
     try {
       const response = await addressService.getAddresses();
       return {
-        addresses: response.data,
+        addresses: normalizeAddressList(response.data),
         cache_timestamp: new Date().toISOString(),
       };
     } catch (error) {
@@ -85,7 +99,7 @@ export const addAddress = createAsyncThunk(
   async (addressData, { rejectWithValue }) => {
     try {
       const response = await addressService.addAddress(toBackendFields(addressData));
-      return response.data;
+      return normalizeAddress(response.data);
     } catch (error) {
       return rejectWithValue(extractErrorMessage(error, 'Failed to add address'));
     }
@@ -101,7 +115,7 @@ export const updateAddress = createAsyncThunk(
   async ({ id, ...addressData }, { rejectWithValue }) => {
     try {
       const response = await addressService.updateAddress(id, toBackendFields(addressData));
-      return response.data;
+      return normalizeAddress(response.data);
     } catch (error) {
       return rejectWithValue(extractErrorMessage(error, 'Failed to update address'));
     }
@@ -134,7 +148,7 @@ export const setDefaultAddress = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const response = await addressService.setDefaultAddress(id);
-      return response.data;
+      return normalizeAddress(response.data);
     } catch (error) {
       return rejectWithValue(extractErrorMessage(error, 'Failed to set default address'));
     }

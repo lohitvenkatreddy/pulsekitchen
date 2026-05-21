@@ -6,14 +6,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Platform,
+  TextInput,
 } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   setUserLocation,
   setSelectedLocation,
-  clearSelectedLocation,
   setLoading,
   setError,
   saveLocationToProfile,
@@ -22,7 +20,6 @@ import {
 import {
   requestLocationPermission,
   getCurrentLocation,
-  reverseGeocodeLocation,
   getLocationErrorMessage,
 } from '../services/locationService';
 import { validateCoordinates } from '../utils/coordinateUtils';
@@ -33,56 +30,40 @@ export default function MapSelectionScreen({ navigation }) {
   const dispatch = useDispatch();
   const { userLocation, selectedLocation, isLoading, error, isSaving, saveSuccess } =
     useSelector((state) => state.mapSelection);
-  const [isResolvingPlace, setIsResolvingPlace] = useState(false);
 
-  const [mapRegion, setMapRegion] = useState({
-    latitude: MAP_CONFIG.defaultCenter.latitude,
-    longitude: MAP_CONFIG.defaultCenter.longitude,
-    latitudeDelta: 0.0922,
-    longitudeDelta: 0.0421,
-  });
+  const [latitude, setLatitude] = useState(String(MAP_CONFIG.defaultCenter.latitude));
+  const [longitude, setLongitude] = useState(String(MAP_CONFIG.defaultCenter.longitude));
+  const [label, setLabel] = useState('Selected Location');
 
   useEffect(() => {
     requestUserLocation();
-    
+
     return () => {
-      // Clean up on unmount
       dispatch(resetState());
     };
   }, []);
 
   useEffect(() => {
     if (userLocation) {
-      // Center map on user location
-      setMapRegion({
-        latitude: userLocation.latitude,
-        longitude: userLocation.longitude,
-        latitudeDelta: 0.0922,
-        longitudeDelta: 0.0421,
-      });
+      setLatitude(String(userLocation.latitude));
+      setLongitude(String(userLocation.longitude));
+      dispatch(setSelectedLocation(userLocation));
     }
-  }, [userLocation]);
+  }, [userLocation, dispatch]);
 
   useEffect(() => {
     if (saveSuccess) {
-      Alert.alert(
-        'Success',
-        'Location saved successfully',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      Alert.alert('Success', 'Location saved successfully', [
+        {
+          text: 'OK',
+          onPress: () => navigation.goBack(),
+        },
+      ]);
     }
-  }, [saveSuccess]);
+  }, [saveSuccess, navigation]);
 
   useEffect(() => {
-    // Show error alert when save fails (but not for location permission errors)
-    if (error && !isLoading && isSaving === false && !saveSuccess) {
-      // Only show alert for save errors, not location errors
-      // Location errors are shown inline in the UI
+    if (error && !isLoading && !isSaving && !saveSuccess) {
       const errorString = typeof error === 'string' ? error : JSON.stringify(error);
       if (errorString.includes('save') || errorString.includes('address')) {
         Alert.alert('Error', errorString);
@@ -95,18 +76,16 @@ export default function MapSelectionScreen({ navigation }) {
     dispatch(setError(null));
 
     try {
-      // Request permission
       const permission = await requestLocationPermission();
-      
+
       if (!permission.granted) {
         dispatch(setError(getLocationErrorMessage('permission_denied')));
         dispatch(setLoading(false));
         return;
       }
 
-      // Get current location
       const location = await getCurrentLocation();
-      
+
       if (location) {
         dispatch(setUserLocation(location));
       } else {
@@ -120,92 +99,105 @@ export default function MapSelectionScreen({ navigation }) {
     }
   };
 
-  const handleMapPress = async (event) => {
-    const { latitude, longitude } = event.nativeEvent.coordinate;
-    
-    // Validate coordinates
-    const validation = validateCoordinates(latitude, longitude);
+  const handleUseCoordinates = () => {
+    const parsedLatitude = Number(latitude);
+    const parsedLongitude = Number(longitude);
+    const validation = validateCoordinates(parsedLatitude, parsedLongitude);
+
     if (!validation.valid) {
       Alert.alert('Invalid Location', validation.error);
       return;
     }
 
-    const coordinates = { latitude, longitude };
-    dispatch(setSelectedLocation(coordinates));
-    setIsResolvingPlace(true);
-
-    try {
-      const place = await reverseGeocodeLocation(coordinates);
-      dispatch(setSelectedLocation({ ...coordinates, place }));
-    } catch (err) {
-      console.log('[MapSelectionScreen] Reverse geocode error:', err);
-    } finally {
-      setIsResolvingPlace(false);
-    }
+    dispatch(
+      setSelectedLocation({
+        latitude: parsedLatitude,
+        longitude: parsedLongitude,
+        place: {
+          name: label.trim() || 'Selected Location',
+          formattedAddress: label.trim() || 'Selected Location',
+          country: 'US',
+        },
+      })
+    );
   };
 
   const handleSaveLocation = () => {
     if (!selectedLocation) {
-      Alert.alert('No Location Selected', 'Please tap on the map to select a location');
+      Alert.alert('No Location Selected', 'Please choose your current location or enter coordinates');
       return;
     }
 
     dispatch(saveLocationToProfile(selectedLocation));
   };
 
-  const handleRetry = () => {
-    requestUserLocation();
-  };
-
   return (
     <View style={styles.container}>
-      {/* Map View */}
-      <MapView
-        style={styles.map}
-        region={mapRegion}
-        onPress={handleMapPress}
-        showsUserLocation={true}
-        showsMyLocationButton={true}
-        showsCompass={true}
-        loadingEnabled={true}
-      >
-        {/* Selected Location Marker */}
-        {selectedLocation && (
-          <Marker
-            coordinate={selectedLocation}
-            pinColor="red"
-            title={selectedLocation.place?.name || 'Selected Location'}
-            description={selectedLocation.place?.formattedAddress || 'Resolving place name...'}
-          />
-        )}
-      </MapView>
+      <View style={styles.selector}>
+        <Text style={styles.title}>Select Address</Text>
+        <Text style={styles.helpText}>
+          Use your current location or enter coordinates manually. This avoids map rendering issues
+          in APK builds and still saves the address to your profile.
+        </Text>
 
-      {/* Loading Overlay */}
-      {(isLoading || isResolvingPlace) && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#000" />
-          <Text style={styles.loadingText}>
-            {isResolvingPlace ? 'Finding place name...' : 'Getting your location...'}
-          </Text>
+        <View style={styles.formGroup}>
+          <Text style={styles.inputLabel}>Label</Text>
+          <TextInput
+            style={styles.input}
+            value={label}
+            onChangeText={setLabel}
+            placeholder="Home, Work, or place name"
+          />
+        </View>
+
+        <View style={styles.inputRow}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Latitude</Text>
+            <TextInput
+              style={styles.input}
+              value={latitude}
+              onChangeText={setLatitude}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Longitude</Text>
+            <TextInput
+              style={styles.input}
+              value={longitude}
+              onChangeText={setLongitude}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+            />
+          </View>
+        </View>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={handleUseCoordinates}>
+          <Text style={styles.primaryButtonText}>Use These Coordinates</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.secondaryButton} onPress={requestUserLocation}>
+          <Text style={styles.secondaryButtonText}>Use My Current Location</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isLoading && (
+        <View style={styles.statusPanel}>
+          <ActivityIndicator size="small" color="#000" />
+          <Text style={styles.statusText}>Getting your location...</Text>
         </View>
       )}
 
-      {/* Error Message */}
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
         </View>
       )}
 
-      {/* Bottom Panel */}
       <View style={styles.bottomPanel}>
-        {/* Coordinate Display */}
         <CoordinateDisplay coordinates={selectedLocation} />
 
-        {/* Save Button */}
         <TouchableOpacity
           style={[
             styles.saveButton,
@@ -221,11 +213,7 @@ export default function MapSelectionScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>Cancel</Text>
         </TouchableOpacity>
       </View>
@@ -236,90 +224,137 @@ export default function MapSelectionScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f6f7f9',
   },
-  map: {
+  selector: {
+    flex: 1,
+    padding: 20,
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 8,
+  },
+  helpText: {
+    fontSize: 15,
+    color: '#555',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  formGroup: {
+    marginBottom: 14,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+  inputGroup: {
     flex: 1,
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'center',
+  inputLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d9dde3',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#111',
+  },
+  primaryButton: {
+    backgroundColor: '#000',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  primaryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  secondaryButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#d9dde3',
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 10,
+  secondaryButtonText: {
+    color: '#111',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  statusPanel: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+  },
+  statusText: {
+    marginLeft: 8,
     color: '#333',
   },
   errorContainer: {
     position: 'absolute',
     top: 60,
-    left: 15,
-    right: 15,
+    left: 20,
+    right: 20,
     backgroundColor: '#ffebee',
-    padding: 15,
+    padding: 12,
     borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: '#f44336',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#ffcdd2',
   },
   errorText: {
-    flex: 1,
     color: '#c62828',
     fontSize: 14,
-  },
-  retryButton: {
-    backgroundColor: '#f44336',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 4,
-    marginLeft: 10,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    textAlign: 'center',
   },
   bottomPanel: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingBottom: 20,
   },
   saveButton: {
     backgroundColor: '#000',
-    margin: 15,
+    marginHorizontal: 20,
     marginTop: 10,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
   },
   saveButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: '#999',
   },
   saveButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   backButton: {
-    marginHorizontal: 15,
-    marginBottom: 15,
+    backgroundColor: '#f5f5f5',
+    marginHorizontal: 20,
+    marginTop: 10,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
   },
   backButtonText: {
     color: '#333',

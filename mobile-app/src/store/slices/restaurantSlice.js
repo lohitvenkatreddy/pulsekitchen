@@ -13,6 +13,16 @@ const initialState = {
   },
 };
 
+const normalizeRestaurantList = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (Array.isArray(payload?.restaurants)) {
+    return payload.restaurants;
+  }
+  return [];
+};
+
 export const fetchRestaurants = createAsyncThunk(
   'restaurants/fetchAll',
   async (_, { rejectWithValue }) => {
@@ -63,8 +73,9 @@ const restaurantSlice = createSlice({
       })
       .addCase(fetchRestaurants.fulfilled, (state, action) => {
         state.loading = false;
-        state.restaurants = action.payload.restaurants;
-        state.filteredRestaurants = action.payload.restaurants;
+        const restaurants = normalizeRestaurantList(action.payload);
+        state.restaurants = restaurants;
+        state.filteredRestaurants = restaurants;
       })
       .addCase(fetchRestaurants.rejected, (state, action) => {
         state.loading = false;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,23 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchRestaurants } from '../store/slices/restaurantSlice';
 
 export default function RestaurantListScreen({ navigation }) {
+  const dispatch = useDispatch();
   const { filteredRestaurants } = useSelector((state) => state.restaurants);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCuisine, setSelectedCuisine] = useState(null);
 
   const cuisines = ['All', 'Italian', 'Chinese', 'Indian', 'Mexican', 'American', 'Thai'];
 
-  const filteredData = filteredRestaurants.filter((r) => {
+  useEffect(() => {
+    dispatch(fetchRestaurants());
+  }, [dispatch]);
+
+  const restaurants = Array.isArray(filteredRestaurants) ? filteredRestaurants : [];
+  const filteredData = restaurants.filter((r) => {
     const matchesSearch = r.name?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCuisine = !selectedCuisine || selectedCuisine === 'All' || r.cuisine_type === selectedCuisine;
     return matchesSearch && matchesCuisine;

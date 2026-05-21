@@ -112,7 +112,9 @@ const addressService = {
   setDefaultAddress: async (id) => {
     try {
       console.log(`[AddressService] Setting address ${id} as default`);
-      const response = await apiClient.patch(`/users/me/addresses/${id}/set-default`);
+      const response = await apiClient.patch(`/users/me/addresses/${id}`, {
+        is_default: true,
+      });
       console.log(`[AddressService] Successfully set address ${id} as default`);
       return response;
     } catch (error) {
@@ -165,4 +167,3 @@ const handleAddressServiceError = (error) => {
 };
 
 export default addressService;
-

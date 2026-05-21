@@ -9,6 +9,16 @@ const initialState = {
   priorityQueue: [],
 };
 
+const normalizeOrderList = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+  if (Array.isArray(payload?.orders)) {
+    return payload.orders;
+  }
+  return [];
+};
+
 export const createOrder = createAsyncThunk(
   'orders/create',
   async (orderData, { rejectWithValue }) => {
@@ -32,9 +42,9 @@ export const createOrder = createAsyncThunk(
 
 export const fetchOrders = createAsyncThunk(
   'orders/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => {
     try {
-      const response = await orderService.getOrders();
+      const response = await orderService.getOrders(page, limit);
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to fetch orders');
@@ -110,7 +120,8 @@ const orderSlice = createSlice({
       })
       .addCase(fetchOrders.fulfilled, (state, action) => {
         state.loading = false;
-        state.orders = action.payload.orders;
+        const orders = normalizeOrderList(action.payload);
+        state.orders = action.meta.arg?.page > 1 ? [...state.orders, ...orders] : orders;
       })
       .addCase(fetchOrders.rejected, (state, action) => {
         state.loading = false;
@@ -122,7 +133,7 @@ const orderSlice = createSlice({
       })
       .addCase(fetchPriorityQueue.fulfilled, (state, action) => {
         state.loading = false;
-        state.priorityQueue = action.payload.orders;
+        state.priorityQueue = normalizeOrderList(action.payload);
       })
       .addCase(fetchPriorityQueue.rejected, (state, action) => {
         state.loading = false;

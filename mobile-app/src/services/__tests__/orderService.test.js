@@ -34,7 +34,7 @@ describe('orderService', () => {
 
       const result = await orderService.getOrders();
 
-      expect(api.get).toHaveBeenCalledWith('/orders/', {
+      expect(api.get).toHaveBeenCalledWith('/orders', {
         params: {
           skip: 0,
           limit: 10,
@@ -49,7 +49,7 @@ describe('orderService', () => {
 
       const result = await orderService.getOrders(2, 20);
 
-      expect(api.get).toHaveBeenCalledWith('/orders/', {
+      expect(api.get).toHaveBeenCalledWith('/orders', {
         params: {
           skip: 20,
           limit: 20,
@@ -217,7 +217,7 @@ describe('orderService', () => {
 
       const result = await orderService.createOrder(orderData);
 
-      expect(api.post).toHaveBeenCalledWith('/orders/', orderData);
+      expect(api.post).toHaveBeenCalledWith('/orders', orderData);
       expect(result.data).toEqual(mockResponse);
     });
 
