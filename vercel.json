@@ -1,0 +1,14 @@
+{
+  "buildCommand": "cd netlify-dashboards && npm install && npm run build",
+  "outputDirectory": "netlify-dashboards/dist",
+  "installCommand": "npm install --prefix netlify-dashboards",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/api/v1/:path*", "destination": "/api/v1/:path*" },
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/restaurant", "destination": "/restaurant.html" },
+    { "source": "/delivery", "destination": "/delivery.html" }
+  ]
+}
