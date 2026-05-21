@@ -392,7 +392,7 @@ export default function OrdersHistoryScreen({ navigation }) {
     <View style={styles.container}>
       <FlatList
         data={orders}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `order-${item.id ?? item.placed_at}-${index}`}
         renderItem={renderOrder}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}

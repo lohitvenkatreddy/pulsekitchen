@@ -370,7 +370,7 @@ export default function PaymentMethodsScreen({ navigation }) {
     <View style={styles.container}>
       <FlatList
         data={payment_methods}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `payment-method-${item.id ?? item.payment_token ?? item.card_last_four}-${index}`}
         renderItem={renderPaymentCard}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

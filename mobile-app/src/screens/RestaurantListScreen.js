@@ -68,7 +68,7 @@ export default function RestaurantListScreen({ navigation }) {
       {/* Restaurant List */}
       <FlatList
         data={filteredData}
-        keyExtractor={(item) => item.id?.toString()}
+        keyExtractor={(item, index) => `restaurant-${item.id ?? item.name}-${index}`}
         renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.restaurantCard}

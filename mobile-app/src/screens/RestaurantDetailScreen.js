@@ -96,8 +96,8 @@ export default function RestaurantDetailScreen({ route, navigation }) {
           {menuItems.length === 0 && (
             <Text style={styles.emptyMenuText}>No menu items available right now.</Text>
           )}
-          {menuItems.map((item) => (
-            <View key={item.id} style={styles.menuItem}>
+          {menuItems.map((item, index) => (
+            <View key={`${restaurant.id}-menu-${item.id ?? item.name}-${index}`} style={styles.menuItem}>
               {item.image_url ? (
                 <Image source={{ uri: item.image_url }} style={styles.menuItemImage} />
               ) : null}

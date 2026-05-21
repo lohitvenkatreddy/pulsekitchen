@@ -259,9 +259,9 @@ export default function HomeScreen({ navigation }) {
       ) : restaurantsToShow.length === 0 ? (
         <Text style={styles.loadingText}>No restaurants found</Text>
       ) : (
-        restaurantsToShow.map((restaurant) => (
+        restaurantsToShow.map((restaurant, index) => (
           <TouchableOpacity
-            key={restaurant.id}
+            key={`home-restaurant-${restaurant.id ?? restaurant.name}-${index}`}
             style={styles.restaurantCard}
             onPress={() => navigation.navigate('RestaurantDetail', { id: restaurant.id })}
           >

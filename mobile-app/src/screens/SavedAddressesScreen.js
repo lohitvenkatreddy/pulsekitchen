@@ -382,7 +382,7 @@ export default function SavedAddressesScreen({ navigation }) {
     <View style={styles.container}>
       <FlatList
         data={addresses}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `saved-address-${item.id ?? item.label}-${index}`}
         renderItem={renderAddressCard}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

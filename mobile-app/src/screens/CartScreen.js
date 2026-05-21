@@ -544,7 +544,7 @@ export default function CartScreen({ navigation }) {
     <View style={styles.container}>
       <FlatList
         data={cartItems}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => `cart-${item.id ?? item.name}-${index}`}
         renderItem={({ item }) => (
           <View style={styles.cartItem}>
             <View style={styles.itemInfo}>
@@ -590,9 +590,9 @@ export default function CartScreen({ navigation }) {
                 </View>
               )}
               <View style={styles.pickerList}>
-                {addresses.map((address) => (
+                {addresses.map((address, index) => (
                   <TouchableOpacity
-                    key={address.id}
+                    key={`address-${address.id ?? address.label}-${index}`}
                     style={[
                       styles.pickerOption,
                       selectedAddressId === address.id && styles.pickerOptionSelected,
@@ -639,9 +639,9 @@ export default function CartScreen({ navigation }) {
                 <Text style={styles.emptySelection}>No payment method selected.</Text>
               )}
               <View style={styles.pickerList}>
-                {payment_methods.map((method) => (
+                {payment_methods.map((method, index) => (
                   <TouchableOpacity
-                    key={method.id}
+                    key={`payment-${method.id ?? method.payment_token ?? method.card_last_four}-${index}`}
                     style={[
                       styles.pickerOption,
                       selectedPaymentId === method.id && styles.pickerOptionSelected,
