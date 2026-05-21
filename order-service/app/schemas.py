@@ -43,6 +43,23 @@ class OrderCreate(BaseModel):
     order_type: Optional[str] = "normal"
     coupon_code: Optional[str] = None
     tax_rate: Optional[float] = Field(default=0.0, ge=0, le=0.25)
+    student_verification_id: Optional[str] = None
+    emergency_verification_id: Optional[str] = None
+
+
+class StudentIdVerificationResponse(BaseModel):
+    verified: bool
+    score: float
+    verification_id: Optional[str] = None
+    message: str
+
+
+class EmergencyVerificationResponse(BaseModel):
+    status: str
+    message: str
+    reasons: Optional[List[str]] = None
+    verification_id: Optional[str] = None
+    result: Dict[str, Any]
 
 
 class OrderResponse(BaseModel):
@@ -53,6 +70,7 @@ class OrderResponse(BaseModel):
     items: str
     total_amount: float
     delivery_address: str
+    order_type: Optional[str] = "normal"
     priority_level: PriorityLevel
     priority_score: float
     urgency_score: float

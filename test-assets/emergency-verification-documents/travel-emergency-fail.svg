@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#fff7ed"/>
+  <rect x="70" y="60" width="1060" height="640" rx="22" fill="#ffffff" stroke="#c2410c" stroke-width="6"/>
+  <rect x="70" y="60" width="1060" height="120" rx="22" fill="#c2410c"/>
+  <text x="110" y="135" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#ffffff">Coffee Shop Receipt</text>
+  <text x="870" y="135" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#ffedd5">NOT A TICKET</text>
+  <text x="110" y="240" font-family="Arial, sans-serif" font-size="34" fill="#111827">Customer: Lohith Venkat Reddy</text>
+  <text x="110" y="305" font-family="Arial, sans-serif" font-size="34" fill="#111827">Receipt Date: 01 May 2026</text>
+  <text x="110" y="370" font-family="Arial, sans-serif" font-size="34" fill="#111827">Items: Cappuccino, Sandwich, Brownie</text>
+  <text x="110" y="435" font-family="Arial, sans-serif" font-size="34" fill="#111827">Total Paid: ₹420</text>
+  <rect x="110" y="500" width="980" height="80" fill="#fee2e2" stroke="#ef4444" stroke-width="3"/>
+  <text x="140" y="552" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#991b1b">Failure reason: receipt is not a travel ticket and date is old.</text>
+  <text x="110" y="645" font-family="Arial, sans-serif" font-size="24" fill="#7c2d12">No journey, no PNR, no destination, no valid travel date.</text>
+</svg>

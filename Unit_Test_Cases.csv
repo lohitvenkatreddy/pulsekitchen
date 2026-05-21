@@ -1,0 +1,5 @@
+Project Name,Tester Name,Module,File,Test Case Name,Description
+SWE project,Lohith,delivery-service,test_eta.py,test_priority_eta_reduces_for_critical_orders,Verifies that priority ETA is lower for critical orders compared to normal orders
+SWE project,Vivek,delivery-service,test_eta.py,test_calculate_eta_returns_expected_shape,Verifies that calculate_eta function returns positive eta minutes and distance with a breakdown
+SWE project,Sankeerthan,order-service,test_priority.py,test_priority_score_increases_for_hospital_vip_orders,Verifies that priority score increases for hospital VIP orders compared to regular orders
+SWE project,Lohith,order-service,test_priority.py,test_waiting_time_prevents_starvation,Verifies that waiting time score is higher for older orders to prevent starvation

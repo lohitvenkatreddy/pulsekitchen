@@ -1,8 +1,10 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from pathlib import Path
 from . import models, database, eta
 from .schemas import (
     DeliveryAssignmentCreate,
@@ -11,11 +13,26 @@ from .schemas import (
     PartnerResponse,
     LocationUpdate,
 )
+from datetime import datetime
 
 router = APIRouter(prefix="/api/v1/delivery", tags=["Delivery"])
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
-def _delivery_address_coords(raw) -> dict:
+def _safe_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coords_are_valid(coords: dict) -> bool:
+    lat = _safe_float(coords.get("latitude"))
+    lon = _safe_float(coords.get("longitude"))
+    return not (abs(lat) < 0.001 and abs(lon) < 0.001)
+
+
+def _delivery_address_coords(raw, fallback: Optional[dict] = None) -> dict:
     if isinstance(raw, dict):
         d = raw
     else:
@@ -23,10 +40,39 @@ def _delivery_address_coords(raw) -> dict:
             d = json.loads(raw) if raw else {}
         except (json.JSONDecodeError, TypeError):
             d = {}
-    return {
-        "latitude": float(d.get("latitude") or 0),
-        "longitude": float(d.get("longitude") or 0),
+    coords = {
+        "latitude": _safe_float(d.get("latitude")),
+        "longitude": _safe_float(d.get("longitude")),
     }
+    if _coords_are_valid(coords):
+        return coords
+    return fallback or coords
+
+
+def _default_user_address_coords(order: models.Order, db: Session) -> dict:
+    if not order or not order.user_id:
+        return {"latitude": 0.0, "longitude": 0.0}
+
+    address = (
+        db.query(models.UserAddress)
+        .filter(models.UserAddress.user_id == order.user_id)
+        .order_by(models.UserAddress.is_default.desc(), models.UserAddress.id.desc())
+        .first()
+    )
+    if not address:
+        return {"latitude": 0.0, "longitude": 0.0}
+
+    return {
+        "latitude": _safe_float(address.latitude),
+        "longitude": _safe_float(address.longitude),
+    }
+
+
+def _dropoff_coords_for_order(order: models.Order, db: Session) -> dict:
+    return _delivery_address_coords(
+        order.delivery_address,
+        fallback=_default_user_address_coords(order, db),
+    )
 
 
 def _partner_payload(partner: models.DeliveryPartner, distance_km: Optional[float] = None):
@@ -42,6 +88,146 @@ def _partner_payload(partner: models.DeliveryPartner, distance_km: Optional[floa
     if distance_km is not None:
         payload["distance_km"] = distance_km
     return PartnerResponse.model_validate(payload)
+
+
+def _assignment_payload(assignment: models.DeliveryAssignment):
+    order = assignment.order
+    restaurant = order.restaurant if order else None
+    return {
+        "id": assignment.id,
+        "order_id": assignment.order_id,
+        "delivery_partner_id": assignment.delivery_partner_id,
+        "status": assignment.status,
+        "assigned_at": assignment.assigned_at,
+        "picked_up_at": assignment.picked_up_at,
+        "delivered_at": assignment.delivered_at,
+        "eta_minutes": assignment.eta_minutes,
+        "order": {
+            "id": order.id,
+            "status": order.status,
+            "order_type": order.order_type,
+            "priority_level": order.priority_level,
+            "priority_score": float(order.priority_score or 0),
+            "delivery_address": order.delivery_address,
+            "total_amount": float(order.total_amount or 0),
+            "special_instructions": order.special_instructions,
+            "placed_at": order.placed_at,
+        } if order else None,
+        "restaurant": {
+            "id": restaurant.id,
+            "name": restaurant.name,
+            "address": restaurant.address,
+            "latitude": restaurant.latitude,
+            "longitude": restaurant.longitude,
+        } if restaurant else None,
+    }
+
+
+def _status_value(status_value) -> str:
+    return status_value.value if hasattr(status_value, "value") else str(status_value)
+
+
+def _eta_payload_for_order(order: models.Order, eta_data: dict, partner=None) -> dict:
+    status_value = _status_value(order.status)
+    standard_eta = int(eta_data.get("eta_minutes") or 0)
+    priority_eta = eta.calculate_priority_eta_details(
+        standard_eta,
+        priority_level=str(order.priority_level or "normal"),
+        order_type=str(order.order_type or "normal"),
+        is_express=str(order.order_type or "").lower() == "express",
+    )
+
+    if status_value in {"delivered", "cancelled"}:
+        priority_eta = {
+            **priority_eta,
+            "standard_eta_minutes": 0,
+            "eta_minutes": 0,
+            "eta_savings_minutes": 0,
+        }
+
+    return {
+        "order_id": order.id,
+        "status": status_value,
+        "distance_km": eta_data.get("distance_km", 0.0),
+        "order_type": order.order_type,
+        "priority_level": order.priority_level,
+        "priority_score": float(order.priority_score or 0),
+        "eta_source": eta_data.get("eta_source"),
+        "partner_location": {
+            "latitude": partner.latitude,
+            "longitude": partner.longitude,
+        } if partner and partner.latitude else None,
+        **priority_eta,
+    }
+
+
+@router.get("/dashboard", include_in_schema=False)
+def delivery_dashboard():
+    return FileResponse(STATIC_DIR / "dashboard.html")
+
+
+@router.get("/partners", response_model=List[PartnerResponse])
+def list_partners(db: Session = Depends(database.get_db)):
+    partners = (
+        db.query(models.DeliveryPartner)
+        .join(models.User, models.User.id == models.DeliveryPartner.user_id)
+        .filter(models.User.approval_status == "approved")
+        .order_by(models.DeliveryPartner.id)
+        .all()
+    )
+    return [_partner_payload(p) for p in partners]
+
+
+@router.get("/partners/by-user/{user_id}", response_model=PartnerResponse)
+def get_partner_by_user(user_id: int, db: Session = Depends(database.get_db)):
+    partner = (
+        db.query(models.DeliveryPartner)
+        .join(models.User, models.User.id == models.DeliveryPartner.user_id)
+        .filter(models.DeliveryPartner.user_id == user_id, models.User.approval_status == "approved")
+        .first()
+    )
+    if not partner:
+        raise HTTPException(status_code=404, detail="Delivery partner not found")
+    return _partner_payload(partner)
+
+
+@router.get("/partners/{partner_id}/current")
+def get_current_assignment(partner_id: int, db: Session = Depends(database.get_db)):
+    partner = (
+        db.query(models.DeliveryPartner)
+        .filter(models.DeliveryPartner.id == partner_id)
+        .first()
+    )
+    if not partner:
+        raise HTTPException(status_code=404, detail="Delivery partner not found")
+
+    assignment = None
+    if partner.current_order_id:
+        assignment = (
+            db.query(models.DeliveryAssignment)
+            .filter(
+                models.DeliveryAssignment.delivery_partner_id == partner_id,
+                models.DeliveryAssignment.order_id == partner.current_order_id,
+            )
+            .order_by(models.DeliveryAssignment.id.desc())
+            .first()
+        )
+
+    if not assignment:
+        assignment = (
+            db.query(models.DeliveryAssignment)
+            .filter(
+                models.DeliveryAssignment.delivery_partner_id == partner_id,
+                models.DeliveryAssignment.status.in_(["assigned", "picked_up"]),
+            )
+            .order_by(models.DeliveryAssignment.id.desc())
+            .first()
+        )
+
+    return {
+        "partner": _partner_payload(partner),
+        "assignment": _assignment_payload(assignment) if assignment else None,
+    }
 
 
 @router.post("/assign", response_model=DeliveryAssignmentResponse)
@@ -61,12 +247,26 @@ def assign_delivery_partner(
     if order.delivery_partner_id:
         raise HTTPException(status_code=400, detail="Order already has a delivery partner")
 
+    if _status_value(order.status).lower() != "ready_for_pickup":
+        raise HTTPException(
+            status_code=400,
+            detail="Order can be claimed only after the restaurant marks it ready for pickup",
+        )
+
     # Check if partner exists and is available
     partner = db.query(models.DeliveryPartner).filter(
         models.DeliveryPartner.id == assignment.delivery_partner_id
     ).first()
     if not partner:
         raise HTTPException(status_code=404, detail="Delivery partner not found")
+
+    partner_user = (
+        db.query(models.User)
+        .filter(models.User.id == partner.user_id)
+        .first()
+    )
+    if not partner_user or partner_user.approval_status != "approved":
+        raise HTTPException(status_code=400, detail="Delivery partner is not approved")
 
     if not partner.is_available:
         raise HTTPException(status_code=400, detail="Delivery partner is not available")
@@ -76,7 +276,7 @@ def assign_delivery_partner(
         models.Restaurant.id == order.restaurant_id
     ).first()
 
-    dropoff = _delivery_address_coords(order.delivery_address)
+    dropoff = _dropoff_coords_for_order(order, db)
 
     if restaurant and restaurant.latitude and restaurant.longitude:
         eta_data = eta.calculate_eta(
@@ -95,9 +295,16 @@ def assign_delivery_partner(
         adjusted_eta = eta.calculate_priority_eta(
             eta_data["eta_minutes"],
             str(order.priority_level),
+            order_type=str(order.order_type or "normal"),
+            is_express=str(order.order_type or "").lower() == "express",
         )
     else:
-        adjusted_eta = 30  # Default ETA
+        adjusted_eta = eta.calculate_priority_eta(
+            30,
+            str(order.priority_level),
+            order_type=str(order.order_type or "normal"),
+            is_express=str(order.order_type or "").lower() == "express",
+        )
 
     # Create assignment
     db_assignment = models.DeliveryAssignment(
@@ -106,9 +313,11 @@ def assign_delivery_partner(
         eta_minutes=adjusted_eta,
     )
 
-    # Update order with delivery partner
+    # Update order with delivery partner. If the restaurant already handed the
+    # order over, keep that visible until the driver marks it picked up.
     order.delivery_partner_id = assignment.delivery_partner_id
-    order.status = "confirmed"
+    if order.status not in {"ready_for_pickup", "out_for_delivery", "delivered"}:
+        order.status = "confirmed"
 
     # Update partner availability
     partner.is_available = False
@@ -177,52 +386,29 @@ def start_tracking(order_id: int, db: Session = Depends(database.get_db)):
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    if not order.delivery_partner_id:
-        raise HTTPException(status_code=400, detail="No delivery partner assigned yet")
-
-    partner = db.query(models.DeliveryPartner).filter(
-        models.DeliveryPartner.id == order.delivery_partner_id
-    ).first()
+    partner = None
+    if order.delivery_partner_id:
+        partner = db.query(models.DeliveryPartner).filter(
+            models.DeliveryPartner.id == order.delivery_partner_id
+        ).first()
 
     restaurant = db.query(models.Restaurant).filter(
         models.Restaurant.id == order.restaurant_id
     ).first()
 
-    if not restaurant or not restaurant.latitude:
-        raise HTTPException(status_code=400, detail="Restaurant location not available")
+    dropoff = _dropoff_coords_for_order(order, db)
+    eta_data = {"eta_minutes": 0, "distance_km": 0.0}
 
-    dropoff = _delivery_address_coords(order.delivery_address)
+    if restaurant and restaurant.latitude and restaurant.longitude:
+        eta_data = eta.calculate_routed_delivery_eta(
+            pickup_location={
+                "latitude": float(restaurant.latitude),
+                "longitude": float(restaurant.longitude),
+            },
+            dropoff_location=dropoff,
+        )
 
-    # Calculate ETA
-    eta_data = eta.calculate_eta(
-        pickup_location={
-            "latitude": float(restaurant.latitude),
-            "longitude": float(restaurant.longitude),
-        },
-        dropoff_location=dropoff,
-        partner_location={
-            "latitude": partner.latitude,
-            "longitude": partner.longitude,
-        } if partner and partner.latitude else None,
-    )
-
-    # Adjust for priority
-    adjusted_eta = eta.calculate_priority_eta(
-        eta_data["eta_minutes"],
-        str(order.priority_level),
-    )
-
-    return {
-        "order_id": order_id,
-        "status": order.status,
-        "eta_minutes": adjusted_eta,
-        "distance_km": eta_data["distance_km"],
-        "priority_level": order.priority_level,
-        "partner_location": {
-            "latitude": partner.latitude,
-            "longitude": partner.longitude,
-        } if partner and partner.latitude else None,
-    }
+    return _eta_payload_for_order(order, eta_data, partner)
 
 
 @router.post("/location")
@@ -274,41 +460,22 @@ def get_eta(order_id: int, db: Session = Depends(database.get_db)):
     ).first()
 
     if not restaurant or not restaurant.latitude:
-        return {
-            "order_id": order_id,
-            "status": order.status,
-            "eta_minutes": 0,
-            "distance_km": 0,
-            "priority_level": order.priority_level,
-            "partner_location": None,
-        }
+        return _eta_payload_for_order(
+            order,
+            {"eta_minutes": 0, "distance_km": 0, "eta_source": None},
+            partner,
+        )
 
-    dropoff = _delivery_address_coords(order.delivery_address)
+    dropoff = _dropoff_coords_for_order(order, db)
 
-    eta_data = eta.calculate_eta(
+    eta_data = eta.calculate_routed_delivery_eta(
         pickup_location={
             "latitude": float(restaurant.latitude),
             "longitude": float(restaurant.longitude),
         },
         dropoff_location=dropoff,
     )
-
-    adjusted_eta = eta.calculate_priority_eta(
-        eta_data["eta_minutes"],
-        str(order.priority_level),
-    )
-
-    return {
-        "order_id": order_id,
-        "status": order.status,
-        "eta_minutes": adjusted_eta,
-        "distance_km": eta_data["distance_km"],
-        "priority_level": order.priority_level,
-        "partner_location": {
-            "latitude": partner.latitude,
-            "longitude": partner.longitude,
-        } if partner and partner.latitude else None,
-    }
+    return _eta_payload_for_order(order, eta_data, partner)
 
 
 @router.get("/{order_id}/status")
@@ -344,20 +511,31 @@ def update_assignment_status(
 
     new_status = status_update.get("status")
     if new_status:
+        previous_status = assignment.status
+        now = datetime.now()
         assignment.status = new_status
 
         if new_status == "picked_up":
-            assignment.picked_up_at = __import__("datetime").datetime.now()
-            # Update order status
+            if not assignment.picked_up_at:
+                assignment.picked_up_at = now
             assignment.order.status = "out_for_delivery"
+            if not assignment.order.picked_up_at:
+                assignment.order.picked_up_at = assignment.picked_up_at
         elif new_status == "delivered":
-            assignment.delivered_at = __import__("datetime").datetime.now()
+            if not assignment.picked_up_at:
+                assignment.picked_up_at = now
+            if not assignment.delivered_at:
+                assignment.delivered_at = now
             assignment.order.status = "delivered"
-            # Make partner available again
+            if not assignment.order.picked_up_at:
+                assignment.order.picked_up_at = assignment.picked_up_at
+            if not assignment.order.delivered_at:
+                assignment.order.delivered_at = assignment.delivered_at
             assignment.delivery_partner.is_available = True
             assignment.delivery_partner.current_order_id = None
-            td = assignment.delivery_partner.total_deliveries or 0
-            assignment.delivery_partner.total_deliveries = td + 1
+            if previous_status != "delivered":
+                td = assignment.delivery_partner.total_deliveries or 0
+                assignment.delivery_partner.total_deliveries = td + 1
 
     db.commit()
 

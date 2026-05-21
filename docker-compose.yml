@@ -68,6 +68,12 @@ services:
       - JWT_SECRET_KEY=your-super-secret-jwt-key-change-in-production
       - JWT_ALGORITHM=HS256
       - ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - BREVO_API_KEY=${BREVO_API_KEY:-}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL:-no-reply@pulsekitchen.test}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-PulseKitchen}
+      - SIGNUP_OTP_TTL_MINUTES=${SIGNUP_OTP_TTL_MINUTES:-10}
+      - SIGNUP_OTP_RESEND_COOLDOWN_SECONDS=${SIGNUP_OTP_RESEND_COOLDOWN_SECONDS:-60}
+      - SIGNUP_OTP_MAX_ATTEMPTS=${SIGNUP_OTP_MAX_ATTEMPTS:-5}
     depends_on:
       postgres:
         condition: service_healthy
@@ -121,6 +127,14 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/food_delivery
       - REDIS_URL=redis://redis:6379
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-jwt-key-change-in-production}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+      - EMERGENCY_VERIFICATION_MODE=${EMERGENCY_VERIFICATION_MODE:-auto}
+      - BREVO_API_KEY=${BREVO_API_KEY:-}
+      - BREVO_SENDER_EMAIL=${BREVO_SENDER_EMAIL:-no-reply@pulsekitchen.test}
+      - BREVO_SENDER_NAME=${BREVO_SENDER_NAME:-PulseKitchen}
     depends_on:
       postgres:
         condition: service_healthy
@@ -140,6 +154,10 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/food_delivery
       - REDIS_URL=redis://redis:6379
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
+      - GOOGLE_DISTANCE_MATRIX_URL=${GOOGLE_DISTANCE_MATRIX_URL:-https://maps.googleapis.com/maps/api/distancematrix/json}
+      - OSRM_ROUTE_URL=${OSRM_ROUTE_URL:-https://router.project-osrm.org/route/v1/driving}
+      - ROUTING_TIMEOUT_SECONDS=${ROUTING_TIMEOUT_SECONDS:-4}
     depends_on:
       postgres:
         condition: service_healthy

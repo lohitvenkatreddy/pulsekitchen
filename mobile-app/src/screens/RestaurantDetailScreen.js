@@ -7,10 +7,12 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import { addItemToCart } from '../store/slices/cartSlice';
 import restaurantService from '../services/restaurantService';
+import { formatCurrency } from '../utils/currency';
 
 export default function RestaurantDetailScreen({ route, navigation }) {
   const { id } = route.params;
@@ -64,7 +66,7 @@ export default function RestaurantDetailScreen({ route, navigation }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#000" />
       </View>
     );
   }
@@ -96,10 +98,13 @@ export default function RestaurantDetailScreen({ route, navigation }) {
           )}
           {menuItems.map((item) => (
             <View key={item.id} style={styles.menuItem}>
+              {item.image_url ? (
+                <Image source={{ uri: item.image_url }} style={styles.menuItemImage} />
+              ) : null}
               <View style={styles.menuItemInfo}>
                 <Text style={styles.menuItemName}>{item.name}</Text>
                 <Text style={styles.menuItemDescription}>{item.description}</Text>
-                <Text style={styles.menuItemPrice}>${item.price.toFixed(2)}</Text>
+                <Text style={styles.menuItemPrice}>{formatCurrency(item.price)}</Text>
               </View>
               <TouchableOpacity
                 style={styles.addButton}
@@ -183,11 +188,18 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: '#fff',
     padding: 15,
     borderRadius: 12,
     marginBottom: 10,
+  },
+  menuItemImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    marginRight: 12,
+    backgroundColor: '#eee',
   },
   menuItemInfo: {
     flex: 1,
@@ -205,11 +217,11 @@ const styles = StyleSheet.create({
   menuItemPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#000',
     marginTop: 8,
   },
   addButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#000',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
@@ -226,7 +238,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   checkoutButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#000',
     paddingHorizontal: 30,
     paddingVertical: 12,
     borderRadius: 8,

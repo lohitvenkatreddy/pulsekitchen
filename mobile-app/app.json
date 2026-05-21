@@ -1,19 +1,24 @@
 {
   "expo": {
-    "name": "Food Delivery",
-    "slug": "food-delivery-app",
+    "name": "PulseKitchen",
+    "slug": "pulsekitchen",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.pulsekitchen"
     },
     "android": {
+      "package": "com.pulsekitchen.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       }
     },
-    "scheme": "fooddelivery"
+    "scheme": "pulsekitchen"
   }
 }

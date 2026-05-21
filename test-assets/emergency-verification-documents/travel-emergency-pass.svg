@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f4f7fb"/>
+  <rect x="70" y="60" width="1060" height="640" rx="22" fill="#ffffff" stroke="#1e5aa7" stroke-width="6"/>
+  <rect x="70" y="60" width="1060" height="120" rx="22" fill="#1e5aa7"/>
+  <text x="110" y="135" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#ffffff">Karnataka Rail e-Ticket</text>
+  <text x="885" y="135" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#dff0ff">CONFIRMED</text>
+  <text x="110" y="235" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1e2a36">Passenger</text>
+  <text x="110" y="278" font-family="Arial, sans-serif" font-size="34" fill="#111827">Lohith Venkat Reddy</text>
+  <text x="110" y="350" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1e2a36">Journey</text>
+  <text x="110" y="395" font-family="Arial, sans-serif" font-size="36" fill="#111827">Bengaluru City → Chennai Central</text>
+  <text x="110" y="470" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1e2a36">Travel Date</text>
+  <text x="110" y="515" font-family="Arial, sans-serif" font-size="36" fill="#0f766e">10 May 2026</text>
+  <text x="520" y="235" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1e2a36">Train</text>
+  <text x="520" y="278" font-family="Arial, sans-serif" font-size="34" fill="#111827">12658 Chennai Mail</text>
+  <text x="520" y="350" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1e2a36">PNR</text>
+  <text x="520" y="395" font-family="Arial, sans-serif" font-size="34" fill="#111827">4827193056</text>
+  <text x="520" y="470" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1e2a36">Coach / Seat</text>
+  <text x="520" y="515" font-family="Arial, sans-serif" font-size="34" fill="#111827">S3 / 42 Lower</text>
+  <rect x="865" y="225" width="180" height="180" fill="#111827"/>
+  <rect x="885" y="245" width="30" height="30" fill="#ffffff"/>
+  <rect x="945" y="245" width="70" height="30" fill="#ffffff"/>
+  <rect x="885" y="305" width="90" height="30" fill="#ffffff"/>
+  <rect x="1000" y="305" width="25" height="75" fill="#ffffff"/>
+  <rect x="900" y="365" width="45" height="20" fill="#ffffff"/>
+  <text x="830" y="450" font-family="Arial, sans-serif" font-size="22" fill="#4b5563">QR verified ticket</text>
+  <line x1="110" y1="585" x2="1090" y2="585" stroke="#d1d5db" stroke-width="2"/>
+  <text x="110" y="635" font-family="Arial, sans-serif" font-size="24" fill="#4b5563">Issued by Karnataka Rail Online Booking • Fare paid • Valid photo ID required during journey</text>
+</svg>

@@ -32,7 +32,7 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Food Delivery</Text>
+      <Text style={styles.title}>PulseKitchen</Text>
       <Text style={styles.subtitle}>Sign in to continue</Text>
 
       <TextInput
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#000',
     textAlign: 'center',
     marginBottom: 10,
   },
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   button: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#000',
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
@@ -127,6 +127,6 @@ const styles = StyleSheet.create({
   },
   linkBold: {
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#000',
   },
 });

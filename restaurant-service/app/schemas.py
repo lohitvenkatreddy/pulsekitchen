@@ -6,6 +6,7 @@ from datetime import datetime
 class MenuItemCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    image_url: Optional[str] = None
     price: float = Field(gt=0)
     is_available: bool = True
 
@@ -13,6 +14,7 @@ class MenuItemCreate(BaseModel):
 class MenuItemPatch(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    image_url: Optional[str] = None
     price: Optional[float] = Field(default=None, gt=0)
     is_available: Optional[bool] = None
 
@@ -67,6 +69,7 @@ class MenuItemResponse(BaseModel):
     id: int
     name: str
     description: Optional[str]
+    image_url: Optional[str] = None
     price: float
     is_available: bool
 
@@ -86,6 +89,8 @@ class RestaurantSummary(BaseModel):
     distance_km: Optional[float] = None
     is_open: bool = True
     is_public: bool = True
+    approval_status: Optional[str] = None
+    menu_items: List[MenuItemResponse] = []
 
     class Config:
         from_attributes = True

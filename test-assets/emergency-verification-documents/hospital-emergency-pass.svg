@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#f0fdf4"/>
+  <rect x="70" y="60" width="1060" height="640" rx="22" fill="#ffffff" stroke="#15803d" stroke-width="6"/>
+  <rect x="70" y="60" width="1060" height="120" rx="22" fill="#15803d"/>
+  <text x="110" y="135" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#ffffff">CityCare Hospital</text>
+  <text x="790" y="135" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#dcfce7">EMERGENCY VISIT NOTE</text>
+  <text x="110" y="235" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2937">Patient</text>
+  <text x="110" y="278" font-family="Arial, sans-serif" font-size="34" fill="#111827">Lohith Venkat Reddy</text>
+  <text x="110" y="350" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2937">Visit Date</text>
+  <text x="110" y="395" font-family="Arial, sans-serif" font-size="36" fill="#15803d">09 May 2026</text>
+  <text x="110" y="470" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2937">Department</text>
+  <text x="110" y="515" font-family="Arial, sans-serif" font-size="34" fill="#111827">Emergency Medicine</text>
+  <text x="560" y="235" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2937">Doctor</text>
+  <text x="560" y="278" font-family="Arial, sans-serif" font-size="34" fill="#111827">Dr. Ananya Rao</text>
+  <text x="560" y="350" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2937">Advice</text>
+  <text x="560" y="395" font-family="Arial, sans-serif" font-size="32" fill="#111827">Rest, fluids, medication every 8 hours</text>
+  <text x="560" y="470" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#1f2937">Document ID</text>
+  <text x="560" y="515" font-family="Arial, sans-serif" font-size="34" fill="#111827">ER-2026-0510-1842</text>
+  <line x1="110" y1="585" x2="1090" y2="585" stroke="#bbf7d0" stroke-width="2"/>
+  <text x="110" y="635" font-family="Arial, sans-serif" font-size="24" fill="#4b5563">Signed electronically by CityCare Hospital • Valid medical emergency document within 7 days</text>
+</svg>

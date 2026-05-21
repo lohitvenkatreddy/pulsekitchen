@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#fef2f2"/>
+  <rect x="70" y="60" width="1060" height="640" rx="22" fill="#ffffff" stroke="#b91c1c" stroke-width="6"/>
+  <rect x="70" y="60" width="1060" height="120" rx="22" fill="#b91c1c"/>
+  <text x="110" y="135" font-family="Arial, sans-serif" font-size="46" font-weight="700" fill="#ffffff">Fitness Club Membership Invoice</text>
+  <text x="805" y="135" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#fee2e2">NOT MEDICAL</text>
+  <text x="110" y="240" font-family="Arial, sans-serif" font-size="34" fill="#111827">Member: Lohith Venkat Reddy</text>
+  <text x="110" y="305" font-family="Arial, sans-serif" font-size="34" fill="#111827">Invoice Date: 18 April 2026</text>
+  <text x="110" y="370" font-family="Arial, sans-serif" font-size="34" fill="#111827">Plan: Annual Gym Membership</text>
+  <text x="110" y="435" font-family="Arial, sans-serif" font-size="34" fill="#111827">Amount Paid: ₹12,000</text>
+  <rect x="110" y="500" width="980" height="90" fill="#fee2e2" stroke="#ef4444" stroke-width="3"/>
+  <text x="140" y="552" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#991b1b">Failure reason: not a hospital document and older than 7 days.</text>
+  <text x="110" y="655" font-family="Arial, sans-serif" font-size="24" fill="#7f1d1d">No doctor, no hospital department, no prescription, no medical emergency evidence.</text>
+</svg>

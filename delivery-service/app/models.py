@@ -18,6 +18,13 @@ class Restaurant(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    approval_status = Column(String(50), default="approved")
+
+
 class DeliveryPartner(Base):
     __tablename__ = "delivery_partners"
 
@@ -30,7 +37,24 @@ class DeliveryPartner(Base):
     rating = Column(Float, default=0.0)
     total_deliveries = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class UserAddress(Base):
+    __tablename__ = "user_addresses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=False, index=True)
+    label = Column(String(100))
+    line1 = Column(Text, nullable=False)
+    line2 = Column(Text)
+    city = Column(String(100))
+    region = Column(String(100))
+    postal_code = Column(String(20))
+    country = Column(String(100), default="US")
+    latitude = Column(Float)
+    longitude = Column(Float)
+    is_default = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class Order(Base):
@@ -42,10 +66,13 @@ class Order(Base):
     delivery_partner_id = Column(Integer, ForeignKey("delivery_partners.id"), nullable=True)
     total_amount = Column(Float, nullable=False)
     delivery_address = Column(Text, nullable=False)
+    order_type = Column(String, default="normal")
     priority_level = Column(String, default="normal")
     priority_score = Column(Float, default=0.0)
     status = Column(String, default="pending")
+    special_instructions = Column(Text, nullable=True)
     placed_at = Column(DateTime(timezone=True), server_default=func.now())
+    picked_up_at = Column(DateTime(timezone=True), nullable=True)
     delivered_at = Column(DateTime(timezone=True), nullable=True)
 
     restaurant = relationship("Restaurant")

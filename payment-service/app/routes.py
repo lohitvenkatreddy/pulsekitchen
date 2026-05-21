@@ -10,10 +10,10 @@ router = APIRouter(prefix="/api/v1/payment", tags=["Payment"])
 # Priority delivery fees
 PRIORITY_FEES = {
     "normal": 0.0,
-    "hospital_emergency": 5.0,
-    "student_urgent": 3.0,
-    "travel_emergency": 4.0,
-    "vip": 6.0,
+    "hospital_emergency": 50.0,
+    "student_urgent": 30.0,
+    "travel_emergency": 40.0,
+    "vip": 60.0,
 }
 
 
@@ -40,7 +40,7 @@ def create_payment_intent(
         "amount": intent.amount,
         "priority_fee": priority_fee,
         "total_amount": total_amount,
-        "currency": "USD",
+        "currency": "INR",
     }
 
 
@@ -72,7 +72,7 @@ def process_payment(
         order_id=payment_data.order_id,
         user_id=payment_data.user_id,
         amount=payment_data.amount,
-        currency="USD",
+        currency="INR",
         payment_method=payment_data.payment_method.value,
         priority_fee=priority_fee,
         total_amount=total_amount,
@@ -106,6 +106,21 @@ def process_payment(
         db_payment.status = models.PaymentStatus.FAILED
         db.commit()
         raise HTTPException(status_code=400, detail=f"Payment failed: {str(e)}")
+
+
+@router.get("/priority-fees")
+def get_priority_fees():
+    """Get available priority delivery options and their fees."""
+    return {
+        "priority_options": [
+            {"type": "normal", "name": "Normal Delivery", "fee": 0.0, "icon": "🚚"},
+            {"type": "hospital_emergency", "name": "Hospital Emergency 🚨", "fee": 50.0, "icon": "🚨"},
+            {"type": "student_urgent", "name": "Student (Time-bound) 🎓", "fee": 30.0, "icon": "🎓"},
+            {"type": "travel_emergency", "name": "Travel Emergency ✈️", "fee": 40.0, "icon": "✈️"},
+            {"type": "vip", "name": "VIP Priority ⭐", "fee": 60.0, "icon": "⭐"},
+        ],
+        "currency": "INR",
+    }
 
 
 @router.get("/{payment_id}", response_model=schemas.PaymentResponse)
@@ -212,16 +227,26 @@ def get_saved_payment_methods(user_id: int, db: Session = Depends(database.get_d
     return methods
 
 
-@router.get("/priority-fees")
-def get_priority_fees():
-    """Get available priority delivery options and their fees."""
-    return {
-        "priority_options": [
-            {"type": "normal", "name": "Normal Delivery", "fee": 0.0, "icon": "🚚"},
-            {"type": "hospital_emergency", "name": "Hospital Emergency 🚨", "fee": 5.0, "icon": "🚨"},
-            {"type": "student_urgent", "name": "Student (Time-bound) 🎓", "fee": 3.0, "icon": "🎓"},
-            {"type": "travel_emergency", "name": "Travel Emergency ✈️", "fee": 4.0, "icon": "✈️"},
-            {"type": "vip", "name": "VIP Priority ⭐", "fee": 6.0, "icon": "⭐"},
-        ],
-        "currency": "USD",
-    }
+@router.delete("/saved-methods/{method_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_saved_payment_method(method_id: int, db: Session = Depends(database.get_db)):
+    method = db.query(models.SavedPaymentMethod).filter(models.SavedPaymentMethod.id == method_id).first()
+    if not method:
+        raise HTTPException(status_code=404, detail="Payment method not found")
+    db.delete(method)
+    db.commit()
+    return None
+
+
+@router.put("/saved-methods/{method_id}/set-default", response_model=schemas.SavedCardResponse)
+def set_default_saved_payment_method(method_id: int, db: Session = Depends(database.get_db)):
+    method = db.query(models.SavedPaymentMethod).filter(models.SavedPaymentMethod.id == method_id).first()
+    if not method:
+        raise HTTPException(status_code=404, detail="Payment method not found")
+
+    db.query(models.SavedPaymentMethod).filter(
+        models.SavedPaymentMethod.user_id == method.user_id
+    ).update({"is_default": False})
+    method.is_default = True
+    db.commit()
+    db.refresh(method)
+    return method

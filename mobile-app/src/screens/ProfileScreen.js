@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,24 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
+import { useFocusEffect } from '@react-navigation/native';
 import { logout } from '../store/slices/authSlice';
+import { fetchSettings } from '../store/slices/appSettingsSlice';
 
 export default function ProfileScreen({ navigation }) {
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
+  const { user, loading } = useSelector((state) => state.auth);
+  const { language } = useSelector((state) => state.app_settings);
+
+  // Refresh user data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      dispatch(fetchSettings());
+    }, [dispatch])
+  );
 
   const handleLogout = () => {
     Alert.alert(
@@ -33,11 +44,19 @@ export default function ProfileScreen({ navigation }) {
 
   const menuItems = [
     { title: 'Order History', icon: '📋', screen: 'OrdersHistory' },
-    { title: 'Saved Addresses', icon: '📍' },
-    { title: 'Payment Methods', icon: '💳' },
-    { title: 'Help & Support', icon: '❓' },
-    { title: 'Settings', icon: '⚙️' },
+    { title: 'Saved Addresses', icon: '📍', screen: 'SavedAddresses' },
+    { title: 'Payment Methods', icon: '💳', screen: 'PaymentMethods' },
+    { title: 'Help & Support', icon: '❓', screen: 'HelpSupport' },
+    { title: 'Settings', icon: '⚙️', screen: 'Settings' },
   ];
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#000" />
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -50,6 +69,7 @@ export default function ProfileScreen({ navigation }) {
         </View>
         <Text style={styles.name}>{user?.full_name || 'User'}</Text>
         <Text style={styles.email}>{user?.email || ''}</Text>
+        <Text style={styles.phone}>{user?.phone_number || ''}</Text>
         <Text style={styles.role}>{user?.role || 'customer'}</Text>
       </View>
 
@@ -87,8 +107,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
   header: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#000',
     padding: 30,
     alignItems: 'center',
   },
@@ -104,7 +130,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FF6B35',
+    color: '#000',
   },
   name: {
     fontSize: 22,
@@ -116,6 +142,12 @@ const styles = StyleSheet.create({
     color: '#fff',
     opacity: 0.9,
     marginTop: 5,
+  },
+  phone: {
+    fontSize: 14,
+    color: '#fff',
+    opacity: 0.9,
+    marginTop: 2,
   },
   role: {
     fontSize: 12,

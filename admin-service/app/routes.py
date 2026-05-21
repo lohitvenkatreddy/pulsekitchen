@@ -46,7 +46,7 @@ def stats_overview(
     total_orders = db.query(func.count(models.Order.id)).scalar() or 0
     pending_orders = (
         db.query(func.count(models.Order.id))
-        .filter(models.Order.status == "pending")
+        .filter(func.lower(models.Order.status) == "pending")
         .scalar()
         or 0
     )
@@ -58,11 +58,36 @@ def stats_overview(
     )
     delivered_orders = (
         db.query(func.count(models.Order.id))
-        .filter(models.Order.status == "delivered")
+        .filter(func.lower(models.Order.status) == "delivered")
         .scalar()
         or 0
     )
-    total_revenue = db.query(func.coalesce(func.sum(models.Payment.total_amount), 0)).scalar() or 0
+    active_assignments = (
+        db.query(func.count(models.DeliveryAssignment.id))
+        .filter(models.DeliveryAssignment.status.in_(["assigned", "picked_up"]))
+        .scalar()
+        or 0
+    )
+    available_partners = (
+        db.query(func.count(models.DeliveryPartner.id))
+        .filter(models.DeliveryPartner.is_available == True)
+        .scalar()
+        or 0
+    )
+    busy_partners = (
+        db.query(func.count(models.DeliveryPartner.id))
+        .filter(models.DeliveryPartner.is_available == False)
+        .scalar()
+        or 0
+    )
+    gross_revenue = (
+        db.query(func.coalesce(func.sum(models.Payment.total_amount), 0))
+        .filter(func.lower(models.Payment.status) == "completed")
+        .scalar()
+        or 0
+    )
+    admin_commission = round(float(gross_revenue) * 0.02, 2)
+    restaurant_payout = round(float(gross_revenue) - admin_commission, 2)
 
     return {
         "orders": {
@@ -71,7 +96,17 @@ def stats_overview(
             "priority": int(priority_orders),
             "delivered": int(delivered_orders),
         },
-        "revenue": {"total": float(total_revenue)},
+        "delivery": {
+            "active_assignments": int(active_assignments),
+            "available_partners": int(available_partners),
+            "busy_partners": int(busy_partners),
+        },
+        "revenue": {
+            "gross": round(float(gross_revenue), 2),
+            "admin_commission_rate": 0.02,
+            "admin_commission": admin_commission,
+            "restaurant_payout": restaurant_payout,
+        },
     }
 
 
@@ -85,12 +120,15 @@ def list_users(
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
     role: Optional[str] = Query(None),
+    approval_status: Optional[str] = Query(None),
     skip: int = 0,
     limit: int = 100,
 ):
     q = db.query(models.User)
     if role:
         q = q.filter(models.User.role == role)
+    if approval_status:
+        q = q.filter(models.User.approval_status == approval_status)
     total = q.count()
     rows = q.order_by(models.User.id).offset(skip).limit(limit).all()
     return {
@@ -102,6 +140,7 @@ def list_users(
                 "full_name": u.full_name,
                 "phone_number": u.phone_number,
                 "role": u.role,
+                "approval_status": u.approval_status,
                 "is_active": u.is_active,
                 "is_verified": u.is_verified,
                 "created_at": u.created_at.isoformat() if u.created_at else None,
@@ -121,7 +160,7 @@ def list_orders_admin(
 ):
     pending_ordered = (
         db.query(models.Order)
-        .filter(models.Order.status == "pending")
+        .filter(func.lower(models.Order.status) == "pending")
         .order_by(models.Order.priority_score.desc(), models.Order.id.asc())
         .all()
     )
@@ -129,9 +168,13 @@ def list_orders_admin(
 
     q = db.query(models.Order)
     if status_filter:
-        q = q.filter(models.Order.status == status_filter)
+        q = q.filter(func.lower(models.Order.status) == str(status_filter).lower())
     total = q.count()
     rows = q.order_by(models.Order.placed_at.desc()).offset(skip).limit(limit).all()
+    payment_map = {}
+    if rows:
+        payments = db.query(models.Payment).filter(models.Payment.order_id.in_([o.id for o in rows])).all()
+        payment_map = {p.order_id: p for p in payments}
 
     return {
         "total": total,
@@ -144,8 +187,15 @@ def list_orders_admin(
                 "total_amount": float(o.total_amount) if o.total_amount is not None else None,
                 "priority_score": float(o.priority_score) if o.priority_score is not None else None,
                 "priority_level": o.priority_level,
+                "priority_benefit": _priority_benefit(o.priority_level, o.priority_score),
+                "priority_fee": float(payment_map[o.id].priority_fee) if o.id in payment_map and payment_map[o.id].priority_fee is not None else 0,
+                "delivery_partner_id": o.delivery_partner_id,
+                "special_instructions": o.special_instructions,
                 "placed_at": o.placed_at.isoformat() if o.placed_at else None,
-                "queue_rank": rank_map.get(o.id) if o.status == "pending" else None,
+                "confirmed_at": o.confirmed_at.isoformat() if o.confirmed_at else None,
+                "picked_up_at": o.picked_up_at.isoformat() if o.picked_up_at else None,
+                "delivered_at": o.delivered_at.isoformat() if o.delivered_at else None,
+                "queue_rank": rank_map.get(o.id) if str(o.status).lower() == "pending" else None,
             }
             for o in rows
         ],
@@ -154,41 +204,16 @@ def list_orders_admin(
     }
 
 
-@router.post("/dispatch/next")
-def dispatch_next_priority(
-    db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
-    actor_id: int = Depends(require_admin_user_id),
-):
-    """Mark the highest-priority pending order as confirmed (demo dispatch)."""
-    top = (
-        db.query(models.Order)
-        .filter(models.Order.status == "pending")
-        .order_by(models.Order.priority_score.desc(), models.Order.id.asc())
-        .first()
-    )
-    if not top:
-        raise HTTPException(status_code=404, detail="No pending orders in queue")
-
-    top.status = "confirmed"
-    top.confirmed_at = datetime.utcnow()
-    db.commit()
-    db.refresh(top)
-
-    _log_audit(
-        db,
-        actor_id,
-        "dispatch_next",
-        resource_type="order",
-        resource_id=top.id,
-        details=json.dumps({"new_status": "confirmed", "priority_score": float(top.priority_score or 0)}),
-    )
-
-    return {
-        "dispatched_order_id": top.id,
-        "status": top.status,
-        "priority_score": top.priority_score,
-    }
+def _priority_benefit(priority_level: Optional[str], priority_score: Optional[float]) -> str:
+    level = str(priority_level or "normal").lower()
+    score = float(priority_score or 0)
+    if level == "critical":
+        return f"Top queue treatment, fastest ETA band ({score:.1f})"
+    if level == "high":
+        return f"Moves ahead of normal orders ({score:.1f})"
+    if level == "normal":
+        return f"Standard queue position ({score:.1f})"
+    return f"Low urgency queue ({score:.1f})"
 
 
 @router.get("/notifications/recent")
@@ -253,6 +278,16 @@ def delivery_assignments(
     limit: int = 100,
 ):
     rows = db.query(models.DeliveryAssignment).order_by(models.DeliveryAssignment.id.desc()).limit(limit).all()
+    order_ids = [a.order_id for a in rows]
+    order_map = {}
+    if order_ids:
+        orders = (
+            db.query(models.Order)
+            .filter(models.Order.id.in_(order_ids))
+            .all()
+        )
+        order_map = {o.id: o for o in orders}
+
     return {
         "assignments": [
             {
@@ -261,10 +296,94 @@ def delivery_assignments(
                 "delivery_partner_id": a.delivery_partner_id,
                 "status": a.status,
                 "eta_minutes": a.eta_minutes,
+                "assigned_at": a.assigned_at.isoformat() if a.assigned_at else None,
+                "picked_up_at": a.picked_up_at.isoformat() if a.picked_up_at else None,
+                "delivered_at": a.delivered_at.isoformat() if a.delivered_at else None,
+                "order_status": order_map[a.order_id].status if a.order_id in order_map else None,
+                "order_priority": order_map[a.order_id].priority_level if a.order_id in order_map else None,
             }
             for a in rows
         ]
     }
+
+
+@router.get("/delivery/partners")
+def delivery_partners(
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    rows = (
+        db.query(models.DeliveryPartner)
+        .order_by(models.DeliveryPartner.id.asc())
+        .all()
+    )
+    return {
+        "partners": [
+            {
+                "id": p.id,
+                "user_id": p.user_id,
+                "is_available": bool(p.is_available),
+                "current_order_id": p.current_order_id,
+                "total_deliveries": int(p.total_deliveries or 0),
+                "rating": float(p.rating or 0),
+                "latitude": p.latitude,
+                "longitude": p.longitude,
+            }
+            for p in rows
+        ]
+    }
+
+
+@router.get("/partner-applications")
+def partner_applications(
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+):
+    users = (
+        db.query(models.User)
+        .filter(models.User.role.in_(["restaurant", "delivery_partner"]))
+        .order_by(models.User.created_at.desc(), models.User.id.desc())
+        .all()
+    )
+    restaurant_map = {
+        restaurant.owner_user_id: restaurant
+        for restaurant in db.query(models.Restaurant).all()
+        if restaurant.owner_user_id is not None
+    }
+    partner_map = {
+        partner.user_id: partner
+        for partner in db.query(models.DeliveryPartner).all()
+    }
+    applications = []
+    for user in users:
+        restaurant = restaurant_map.get(user.id)
+        partner = partner_map.get(user.id)
+        applications.append(
+            {
+                "user_id": user.id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "phone_number": user.phone_number,
+                "role": user.role,
+                "approval_status": user.approval_status,
+                "created_at": user.created_at.isoformat() if user.created_at else None,
+                "restaurant": {
+                    "id": restaurant.id,
+                    "name": restaurant.name,
+                    "address": restaurant.address,
+                    "cuisine_type": restaurant.cuisine_type,
+                    "approval_status": restaurant.approval_status,
+                } if restaurant else None,
+                "delivery_partner": {
+                    "id": partner.id,
+                    "is_available": bool(partner.is_available),
+                    "current_order_id": partner.current_order_id,
+                    "rating": float(partner.rating or 0),
+                    "total_deliveries": int(partner.total_deliveries or 0),
+                } if partner else None,
+            }
+        )
+    return {"applications": applications}
 
 
 @router.patch("/restaurants/{restaurant_id}/approval")
@@ -298,6 +417,58 @@ def restaurant_approval(
         details=json.dumps(body),
     )
     return {"id": r.id, "approval_status": r.approval_status, "is_open": r.is_open, "is_public": r.is_public}
+
+
+@router.patch("/users/{user_id}/approval")
+def update_user_approval(
+    user_id: int,
+    body: dict,
+    db: Session = Depends(get_db),
+    _: dict = Depends(require_admin),
+    actor_id: int = Depends(require_admin_user_id),
+):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.role not in {"restaurant", "delivery_partner"}:
+        raise HTTPException(status_code=400, detail="Approval is only supported for partner roles")
+
+    approval_status = str(body.get("approval_status") or "").lower()
+    if approval_status not in {"pending", "approved", "rejected"}:
+        raise HTTPException(status_code=400, detail="Unsupported approval status")
+
+    user.approval_status = approval_status
+    user.approved_by_user_id = actor_id
+    user.approved_at = datetime.utcnow()
+
+    if user.role == "restaurant":
+        restaurant = db.query(models.Restaurant).filter(models.Restaurant.owner_user_id == user.id).first()
+        if restaurant:
+            restaurant.approval_status = approval_status
+            restaurant.is_public = approval_status == "approved"
+            restaurant.is_open = approval_status == "approved" and bool(restaurant.is_open)
+            restaurant.is_active = approval_status != "rejected"
+    if user.role == "delivery_partner":
+        partner = db.query(models.DeliveryPartner).filter(models.DeliveryPartner.user_id == user.id).first()
+        if partner:
+            partner.is_available = approval_status == "approved"
+
+    db.commit()
+    _log_audit(
+        db,
+        actor_id,
+        "user_approval_update",
+        resource_type="user",
+        resource_id=user_id,
+        details=json.dumps({"approval_status": approval_status, "role": user.role}),
+    )
+    return {
+        "id": user.id,
+        "role": user.role,
+        "approval_status": user.approval_status,
+        "approved_by_user_id": user.approved_by_user_id,
+        "approved_at": user.approved_at.isoformat() if user.approved_at else None,
+    }
 
 
 @router.get("/audit-logs")

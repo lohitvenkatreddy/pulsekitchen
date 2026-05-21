@@ -79,3 +79,47 @@ def test_waiting_time_prevents_starvation():
     )
 
     assert old["waiting_time_score"] > fresh["waiting_time_score"]
+
+
+def test_mobile_priority_options_increase_score_in_expected_order():
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 1, 15, 10, 0, 0, tzinfo=tz)
+
+    original_datetime = priority_module.datetime
+    priority_module.datetime = FixedDatetime
+
+    base_order = {
+        "is_vip": False,
+        "user_type": "regular",
+        "item_count": 2,
+        "pickup_location": None,
+        "dropoff_location": None,
+        "placed_at": FixedDatetime.now(),
+    }
+
+    try:
+        normal = calculate_priority_score({**base_order, "order_type": "normal"})
+        student = calculate_priority_score({**base_order, "order_type": "student_urgent"})
+        travel = calculate_priority_score({**base_order, "order_type": "travel_emergency"})
+        vip = calculate_priority_score(
+            {**base_order, "order_type": "vip", "is_vip": True}
+        )
+        hospital = calculate_priority_score(
+            {
+                **base_order,
+                "order_type": "hospital_emergency",
+                "user_type": "hospital",
+            }
+        )
+
+        assert normal["priority_score"] < student["priority_score"] < travel["priority_score"]
+        assert travel["priority_score"] < vip["priority_score"] < hospital["priority_score"]
+        assert get_priority_level(normal["priority_score"]) == "low"
+        assert get_priority_level(student["priority_score"]) == "normal"
+        assert get_priority_level(travel["priority_score"]) == "high"
+        assert get_priority_level(vip["priority_score"]) == "high"
+        assert get_priority_level(hospital["priority_score"]) == "critical"
+    finally:
+        priority_module.datetime = original_datetime

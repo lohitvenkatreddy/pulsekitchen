@@ -1,0 +1,245 @@
+services:
+  api-gateway:
+    build: ./api-gateway
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+      order-service:
+        condition: service_started
+      delivery-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+      admin-service:
+        condition: service_started
+    networks:
+      - food-delivery-network
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-food_delivery}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-food_delivery}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - food-delivery-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - food-delivery-network
+
+  auth-service:
+    build: ./auth-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-no-reply@example.com}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-PulseKitchen}
+      SIGNUP_OTP_TTL_MINUTES: ${SIGNUP_OTP_TTL_MINUTES:-10}
+      SIGNUP_OTP_RESEND_COOLDOWN_SECONDS: ${SIGNUP_OTP_RESEND_COOLDOWN_SECONDS:-60}
+      SIGNUP_OTP_MAX_ATTEMPTS: ${SIGNUP_OTP_MAX_ATTEMPTS:-5}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - food-delivery-network
+
+  user-service:
+    build: ./user-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - food-delivery-network
+
+  restaurant-service:
+    build: ./restaurant-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - food-delivery-network
+
+  order-service:
+    build: ./order-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      EMERGENCY_VERIFICATION_MODE: ${EMERGENCY_VERIFICATION_MODE:-auto}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-no-reply@example.com}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-PulseKitchen}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+
+  delivery-service:
+    build: ./delivery-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
+      GOOGLE_DISTANCE_MATRIX_URL: ${GOOGLE_DISTANCE_MATRIX_URL:-https://maps.googleapis.com/maps/api/distancematrix/json}
+      OSRM_ROUTE_URL: ${OSRM_ROUTE_URL:-https://router.project-osrm.org/route/v1/driving}
+      ROUTING_TIMEOUT_SECONDS: ${ROUTING_TIMEOUT_SECONDS:-4}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+
+  payment-service:
+    build: ./payment-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - food-delivery-network
+
+  notification-service:
+    build: ./notification-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+
+  admin-service:
+    build: ./admin-service
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - food-delivery-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.vps
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - food-delivery-network
+
+networks:
+  food-delivery-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

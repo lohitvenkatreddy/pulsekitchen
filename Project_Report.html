@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Report: Priority-Based Food Delivery System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .gradient-text { background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        @media print {
+            body { background-color: white; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .glass { background: white; border: 1px solid #e2e8f0; backdrop-filter: none; box-shadow: none; color: #1e293b; }
+            .gradient-text { background: none; -webkit-text-fill-color: #1e293b; color: #1e293b; }
+            .text-slate-300, .text-slate-400 { color: #475569 !important; }
+            .bg-slate-800, .bg-slate-900 { background: #f1f5f9 !important; border-color: #e2e8f0 !important; }
+            .border-slate-700 { border-color: #cbd5e1 !important; }
+            .text-cyan-400 { color: #0284c7 !important; }
+            .text-green-400 { color: #16a34a !important; }
+            .text-purple-400 { color: #9333ea !important; }
+            .text-blue-400 { color: #2563eb !important; }
+            .text-orange-400 { color: #ea580c !important; }
+            .text-slate-200 { color: #0f172a !important; }
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen p-8">
+    <div class="max-w-5xl mx-auto space-y-8">
+        <!-- Header -->
+        <header class="glass rounded-2xl p-10 text-center shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cyan-400 to-indigo-500"></div>
+            <h1 class="text-5xl font-extrabold tracking-tight mb-4 gradient-text">Priority-Based Food Delivery</h1>
+            <p class="text-xl text-slate-300">A scalable, real-time platform with priority-aware order processing.</p>
+        </header>
+
+        <!-- Architecture & Tech Stack -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <section class="glass rounded-2xl p-8">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2"><span class="text-blue-400">⚡</span> Microservices Architecture</h2>
+                <ul class="space-y-3 text-slate-300">
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-green-400"></div> <b>Gateway:</b> API Gateway (Port 8000)</li>
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-blue-400"></div> <b>Core Services:</b> Order, Restaurant, User, Auth</li>
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-purple-400"></div> <b>Auxiliary:</b> Delivery, Payment, Notification</li>
+                    <li class="flex items-center gap-3"><div class="w-2 h-2 rounded-full bg-yellow-400"></div> <b>Infrastructure:</b> PostgreSQL, Redis, RabbitMQ</li>
+                </ul>
+            </section>
+
+            <section class="glass rounded-2xl p-8">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2"><span class="text-indigo-400">🛠</span> Tech Stack</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <h3 class="font-bold text-slate-200">Backend</h3>
+                        <p class="text-sm text-slate-400">FastAPI, Python</p>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <h3 class="font-bold text-slate-200">Frontend</h3>
+                        <p class="text-sm text-slate-400">React Native</p>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <h3 class="font-bold text-slate-200">Database</h3>
+                        <p class="text-sm text-slate-400">PostgreSQL, Redis</p>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                        <h3 class="font-bold text-slate-200">Messaging</h3>
+                        <p class="text-sm text-slate-400">RabbitMQ, Celery</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Priority Algorithm -->
+        <section class="glass rounded-2xl p-8">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2"><span class="text-orange-400">🔥</span> Core Priority Algorithm</h2>
+            <div class="bg-slate-900 rounded-xl p-6 font-mono text-center mb-6 border border-slate-700 text-lg">
+                Priority Score = <span class="text-cyan-400">0.4 × urgency</span> + <span class="text-green-400">0.35 × distance</span> + <span class="text-purple-400">0.25 × waiting_time</span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="p-4 border border-slate-700 rounded-xl bg-slate-800/50">
+                    <h4 class="font-bold text-cyan-400 mb-2">Urgency (40%)</h4>
+                    <p class="text-sm text-slate-400">Factors in VIP status, order type (express/hospital/student), and peak hours.</p>
+                </div>
+                <div class="p-4 border border-slate-700 rounded-xl bg-slate-800/50">
+                    <h4 class="font-bold text-green-400 mb-2">Distance (35%)</h4>
+                    <p class="text-sm text-slate-400">Calculates Haversine distance; shorter distances receive higher scores.</p>
+                </div>
+                <div class="p-4 border border-slate-700 rounded-xl bg-slate-800/50">
+                    <h4 class="font-bold text-purple-400 mb-2">Waiting Time (25%)</h4>
+                    <p class="text-sm text-slate-400">Prevents starvation by dynamically boosting the priority of older orders.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testing Status -->
+        <section class="glass rounded-2xl p-8">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2"><span class="text-green-400">🧪</span> Quality Assurance & Testing</h2>
+            <div class="flex items-center gap-8">
+                <div class="text-center">
+                    <div class="text-6xl font-black text-green-400">52</div>
+                    <div class="text-sm text-slate-400 uppercase tracking-widest mt-2 font-bold">Total Tests</div>
+                </div>
+                <div class="flex-1">
+                    <p class="text-slate-300 mb-4">Comprehensive functional and unit testing across all microservices, ensuring system resilience and reliable prioritization. Successfully executed by Lohith, Vivek, and Sankeerthan.</p>
+                    <div class="flex gap-3 flex-wrap">
+                        <span class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-xs text-slate-300 font-medium">Auth: 5</span>
+                        <span class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-xs text-slate-300 font-medium">Order: 9</span>
+                        <span class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-xs text-slate-300 font-medium">Delivery: 8</span>
+                        <span class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-xs text-slate-300 font-medium">Restaurant: 7</span>
+                        <span class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-xs text-slate-300 font-medium">Payment: 7</span>
+                        <span class="px-3 py-1 bg-slate-800 border border-slate-700 rounded-full text-xs text-slate-300 font-medium">Admin: 9</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <footer class="text-center text-slate-500 text-sm mt-12 pb-4">
+            Generated automatically by Codex
+        </footer>
+    </div>
+</body>
+</html>

@@ -33,6 +33,18 @@ export const register = createAsyncThunk(
   }
 );
 
+export const requestSignupOtp = createAsyncThunk(
+  'auth/requestSignupOtp',
+  async (userData, { rejectWithValue }) => {
+    try {
+      const response = await authService.requestSignupOtp(userData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.detail || 'Failed to send OTP');
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -72,6 +84,17 @@ const authSlice = createSlice({
         state.user = action.payload;
       })
       .addCase(register.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      .addCase(requestSignupOtp.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(requestSignupOtp.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(requestSignupOtp.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });

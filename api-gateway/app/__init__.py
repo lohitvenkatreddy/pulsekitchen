@@ -1,28 +1,46 @@
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 import httpx
 
 app = FastAPI(title="API Gateway", version="1.0.0")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+def _csv_env(name: str, default: str) -> list[str]:
+    raw_value = os.getenv(name, default)
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+def _service_url(name: str, default: str) -> str:
+    return os.getenv(name, default).rstrip("/")
+
+
+cors_origins = _csv_env("CORS_ORIGINS", "*")
+allow_all_origins = cors_origins == ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all_origins else cors_origins,
+    allow_credentials=not allow_all_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Upstream microservices (Docker service names)
+# Upstream microservices default to Docker hostnames locally and can be
+# overridden in Render using environment variables.
 SERVICES = {
-    "auth": "http://auth-service:8000",
-    "user": "http://user-service:8000",
-    "restaurant": "http://restaurant-service:8000",
-    "order": "http://order-service:8000",
-    "delivery": "http://delivery-service:8000",
-    "payment": "http://payment-service:8000",
-    "notification": "http://notification-service:8000",
-    "admin": "http://admin-service:8000",
+    "auth": _service_url("AUTH_SERVICE_URL", "http://auth-service:8000"),
+    "user": _service_url("USER_SERVICE_URL", "http://user-service:8000"),
+    "restaurant": _service_url("RESTAURANT_SERVICE_URL", "http://restaurant-service:8000"),
+    "order": _service_url("ORDER_SERVICE_URL", "http://order-service:8000"),
+    "delivery": _service_url("DELIVERY_SERVICE_URL", "http://delivery-service:8000"),
+    "payment": _service_url("PAYMENT_SERVICE_URL", "http://payment-service:8000"),
+    "notification": _service_url("NOTIFICATION_SERVICE_URL", "http://notification-service:8000"),
+    "admin": _service_url("ADMIN_SERVICE_URL", "http://admin-service:8000"),
 }
 
 # First path segment after /api/v1/
@@ -35,6 +53,7 @@ SERVICE_PREFIX_MAP = {
     "payment": "payment",
     "notifications": "notification",
     "admin": "admin",
+    "support": "user",
 }
 
 HOP_BY_HOP_HEADERS = {
@@ -57,20 +76,7 @@ def health_check():
 
 @app.get("/")
 def root():
-    return {
-        "service": "Food Delivery API Gateway",
-        "version": "1.0.0",
-        "endpoints": {
-            "/api/v1/auth": "Authentication Service",
-            "/api/v1/users": "User Service",
-            "/api/v1/restaurants": "Restaurant Service",
-            "/api/v1/orders": "Order Service",
-            "/api/v1/delivery": "Delivery Service",
-            "/api/v1/payment": "Payment Service",
-            "/api/v1/notifications": "Notification Service",
-            "/api/v1/admin": "Admin Service",
-        },
-    }
+    return FileResponse(STATIC_DIR / "landing.html")
 
 
 @app.api_route(

@@ -33,7 +33,11 @@ def list_restaurants(
     limit: int = 50,
     db: Session = Depends(database.get_db),
 ):
-    q = db.query(models.Restaurant).filter(models.Restaurant.is_active == True)
+    q = (
+        db.query(models.Restaurant)
+        .options(joinedload(models.Restaurant.menu_items))
+        .filter(models.Restaurant.is_active == True)
+    )
     if public_only:
         q = q.filter(models.Restaurant.is_public == True)
     if approved_only:
@@ -73,6 +77,8 @@ def list_restaurants(
                 distance_km=round(dist, 2) if dist is not None else None,
                 is_open=bool(r.is_open),
                 is_public=bool(r.is_public),
+                approval_status=r.approval_status,
+                menu_items=[i for i in r.menu_items if i.is_available],
             )
         )
 
@@ -93,6 +99,8 @@ def search_restaurants(
 ):
     query = (
         db.query(models.Restaurant)
+        .outerjoin(models.MenuItem)
+        .options(joinedload(models.Restaurant.menu_items))
         .filter(
             models.Restaurant.is_active == True,
             models.Restaurant.is_public == True,
@@ -102,8 +110,16 @@ def search_restaurants(
             (models.Restaurant.name.ilike(f"%{q}%"))
             | (models.Restaurant.cuisine_type.ilike(f"%{q}%"))
             | (models.Restaurant.address.ilike(f"%{q}%"))
+            | (
+                (models.MenuItem.is_available == True)
+                & (
+                    (models.MenuItem.name.ilike(f"%{q}%"))
+                    | (models.MenuItem.description.ilike(f"%{q}%"))
+                )
+            )
         )
         .order_by(models.Restaurant.rating.desc())
+        .distinct()
     )
     rows = query.offset(skip).limit(limit).all()
     restaurants = [
@@ -119,6 +135,8 @@ def search_restaurants(
             distance_km=None,
             is_open=bool(r.is_open),
             is_public=bool(r.is_public),
+            approval_status=r.approval_status,
+            menu_items=[i for i in r.menu_items if i.is_available],
         )
         for r in rows
     ]

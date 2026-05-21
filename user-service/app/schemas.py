@@ -28,3 +28,27 @@ class UserResponse(BaseModel):
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(None, min_length=2)
     phone_number: Optional[str] = None
+
+
+class NotificationSettings(BaseModel):
+    push_enabled: bool = True
+    sms_enabled: bool = True
+    email_enabled: bool = True
+
+
+class PrivacySettings(BaseModel):
+    share_location: bool = False
+    share_analytics: bool = False
+    marketing_communications: bool = False
+
+
+class LanguageSettings(BaseModel):
+    language: str = Field("en", pattern="^(en|es|fr|zh)$")
+
+
+class UserSettingsResponse(BaseModel):
+    user_id: int
+    notifications: NotificationSettings
+    privacy: PrivacySettings
+    language: str
+    updated_at: Optional[datetime] = None

@@ -26,6 +26,11 @@ const restaurantService = {
     const response = await api.get(`/restaurants/cuisine/${cuisine}`);
     return response;
   },
+
+  createReview: async (restaurantId, reviewData) => {
+    const response = await api.post(`/restaurants/${restaurantId}/reviews`, reviewData);
+    return response;
+  },
 };
 
 export default restaurantService;

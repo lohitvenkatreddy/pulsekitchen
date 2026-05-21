@@ -1,8 +1,10 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/food_delivery"
     JWT_SECRET_KEY: str = "your-super-secret-jwt-key-change-in-production"
     JWT_ALGORITHM: str = "HS256"
@@ -14,10 +16,6 @@ class Settings(BaseSettings):
     DELIVERY_URL: str = "http://delivery-service:8000"
     RESTAURANT_URL: str = "http://restaurant-service:8000"
     USER_URL: str = "http://user-service:8000"
-
-    class Config:
-        env_file = ".env"
-
 
 @lru_cache()
 def get_settings() -> Settings:

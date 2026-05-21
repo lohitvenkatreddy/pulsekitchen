@@ -1,0 +1,53 @@
+Sno,Tester Name,Module,Test Case Name,Description
+1,Lohith,auth-service,test_user_registration_success,Verify user can register successfully with valid details
+2,Vivek,auth-service,test_user_registration_duplicate,Verify registration fails when using an already registered email
+3,Sankeerthan,auth-service,test_user_login_success,Verify user receives token upon successful login
+4,Lohith,auth-service,test_user_login_invalid,Verify login fails with incorrect password
+5,Vivek,auth-service,test_get_current_user,Verify /me endpoint returns correct profile for authenticated user
+6,Sankeerthan,user-service,test_get_user_by_id,Verify user details can be fetched by ID
+7,Lohith,user-service,test_update_user_profile,Verify user can update their profile information correctly
+8,Vivek,restaurant-service,test_get_all_restaurants,Verify fetching the list of all restaurants
+9,Sankeerthan,restaurant-service,test_search_restaurants,Verify searching restaurants by keyword works as expected
+10,Lohith,restaurant-service,test_filter_restaurants_by_cuisine,Verify filtering restaurants by specific cuisine returns valid results
+11,Vivek,restaurant-service,test_get_restaurant_menu,Verify fetching the menu items of a specific restaurant
+12,Sankeerthan,restaurant-service,test_get_restaurant_reviews,Verify fetching the reviews for a given restaurant
+13,Lohith,restaurant-service,test_add_restaurant_review,Verify user can successfully post a new review for a restaurant
+14,Vivek,restaurant-service,test_get_restaurant_details,Verify fetching detailed information for a specific restaurant
+15,Sankeerthan,order-service,test_create_order_success,Verify creating a new order generates an order ID and status
+16,Lohith,order-service,test_create_order_invalid,Verify order creation fails if payload is malformed
+17,Vivek,order-service,test_get_user_order_history,Verify fetching the order history returning correct past orders
+18,Sankeerthan,order-service,test_get_pending_queue,Verify fetching the list of orders currently in pending queue
+19,Lohith,order-service,test_get_order_queue_position,Verify fetching the correct queue position of a specific order
+20,Vivek,order-service,test_get_order_details,Verify fetching the detailed summary of a specific order
+21,Sankeerthan,order-service,test_update_order_status,Verify patching the status of an order updates correctly
+22,Lohith,payment-service,test_create_payment_intent,Verify system can create a secure payment intent
+23,Vivek,payment-service,test_process_payment,Verify a new payment transaction is successfully processed
+24,Sankeerthan,payment-service,test_get_payment_by_id,Verify retrieving specific payment details using payment ID
+25,Lohith,payment-service,test_get_payment_by_order,Verify retrieving payment information linked to a specific order
+26,Vivek,payment-service,test_process_refund,Verify processing a refund for cancelled or rejected orders
+27,Sankeerthan,payment-service,test_add_saved_payment_method,Verify users can securely add a new payment method
+28,Lohith,payment-service,test_get_saved_payment_methods,Verify fetching all saved payment methods for a specific user
+29,Vivek,delivery-service,test_assign_delivery_partner,Verify system can assign an available delivery partner
+30,Sankeerthan,delivery-service,test_get_available_partners,Verify list of current available delivery partners is accurate
+31,Lohith,delivery-service,test_track_delivery_location,Verify location endpoint returns the current coordinates of driver
+32,Vivek,delivery-service,test_update_partner_location,Verify driver can update their current location successfully
+33,Sankeerthan,delivery-service,test_get_order_delivery_status,Verify fetching the current delivery state for a given order
+34,Lohith,delivery-service,test_update_assignment_status,Verify assignment patches correctly update state (e.g. delivered)
+35,Vivek,notification-service,test_create_notification,Verify creating a system notification for a specific event
+36,Sankeerthan,notification-service,test_get_user_notifications,Verify fetching the latest notifications for a given user
+37,Lohith,notification-service,test_mark_notification_read,Verify patching a notification explicitly marks it as read
+38,Vivek,notification-service,test_register_push_token,Verify device push token is securely registered with the system
+39,Sankeerthan,notification-service,test_send_order_update_notification,Verify order status changes trigger push/email notifications
+40,Lohith,admin-service,test_get_admin_stats_overview,Verify dashboard metrics and stats return correct aggregates
+41,Vivek,admin-service,test_get_all_users,Verify admin can fetch the complete list of registered users
+42,Sankeerthan,admin-service,test_get_all_orders,Verify admin can fetch system-wide lists of orders
+43,Lohith,admin-service,test_dispatch_next_order,Verify manual dispatch endpoint triggers partner assignment
+44,Vivek,admin-service,test_get_recent_notifications,Verify admin logs show recent system notifications correctly
+45,Sankeerthan,admin-service,test_get_recent_payments,Verify admin logs show recent payment transactions
+46,Lohith,admin-service,test_get_delivery_assignments,Verify admin can view active delivery distributions
+47,Vivek,admin-service,test_approve_restaurant,Verify admin can successfully approve a pending restaurant
+48,Sankeerthan,admin-service,test_view_audit_logs,Verify system audit traces are accurately logged and readable
+49,Lohith,delivery-service,test_priority_eta_reduces_for_critical_orders,Verifies that priority ETA is lower for critical orders compared to normal orders
+50,Vivek,delivery-service,test_calculate_eta_returns_expected_shape,Verifies that calculate_eta function returns positive eta minutes and distance with a breakdown
+51,Sankeerthan,order-service,test_priority_score_increases_for_hospital_vip_orders,Verifies that priority score increases for hospital VIP orders compared to regular orders
+52,Lohith,order-service,test_waiting_time_prevents_starvation,Verifies that waiting time score is higher for older orders to prevent starvation

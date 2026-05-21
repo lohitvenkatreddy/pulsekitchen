@@ -6,8 +6,25 @@ const initialState = {
   trackingOrder: null,
   deliveryStatus: null,
   eta: null,
+  etaPayload: null,
   loading: false,
   error: null,
+};
+
+const STATUS_RANK = {
+  pending: 0,
+  confirmed: 1,
+  preparing: 2,
+  ready_for_pickup: 3,
+  out_for_delivery: 4,
+  delivered: 5,
+  cancelled: 6,
+};
+
+const latestStatus = (currentStatus, nextStatus) => {
+  const current = String(currentStatus || '').toLowerCase();
+  const next = String(nextStatus || '').toLowerCase();
+  return (STATUS_RANK[current] ?? -1) > (STATUS_RANK[next] ?? -1) ? current : next;
 };
 
 export const startTracking = createAsyncThunk(
@@ -45,6 +62,7 @@ const deliverySlice = createSlice({
       state.trackingOrder = null;
       state.deliveryStatus = null;
       state.eta = null;
+      state.etaPayload = null;
     },
   },
   extraReducers: (builder) => {
@@ -56,15 +74,20 @@ const deliverySlice = createSlice({
       .addCase(startTracking.fulfilled, (state, action) => {
         state.loading = false;
         const p = action.payload;
+        const previousStatus = state.trackingOrder?.id === p.order_id ? state.trackingOrder?.status : null;
+        const displayStatus = latestStatus(previousStatus, p.status);
         // API returns flat shape: order_id, status, eta_minutes, …
         state.trackingOrder = p.order ?? {
           id: p.order_id,
-          status: p.status,
+          status: displayStatus,
+          order_type: p.order_type,
           priority_level: p.priority_level,
           priority_score: p.priority_score,
         };
-        state.deliveryStatus = p.status;
+        state.trackingOrder.status = latestStatus(state.trackingOrder.status, displayStatus);
+        state.deliveryStatus = state.trackingOrder.status;
         state.eta = p.eta_minutes ?? p.eta;
+        state.etaPayload = { ...p, status: state.trackingOrder.status };
       })
       .addCase(startTracking.rejected, (state, action) => {
         state.loading = false;

@@ -27,8 +27,14 @@ class ETAResponse(BaseModel):
     order_id: int
     status: str
     eta_minutes: int
+    standard_eta_minutes: Optional[int] = None
+    eta_savings_minutes: Optional[int] = None
+    priority_multiplier: Optional[float] = None
     distance_km: float
     priority_level: str
+    order_type: Optional[str] = None
+    priority_score: Optional[float] = None
+    eta_source: Optional[str] = None
     partner_location: Optional[Dict[str, float]]
 
 

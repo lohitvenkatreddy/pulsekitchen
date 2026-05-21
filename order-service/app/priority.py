@@ -12,6 +12,24 @@ from .config import get_settings
 
 settings = get_settings()
 
+ORDER_TYPE_URGENCY_BONUS = {
+    "normal": 0.0,
+    "student_urgent": 18.0,
+    "express": 25.0,
+    "travel_emergency": 32.0,
+    "vip": 38.0,
+    "hospital_emergency": 45.0,
+}
+
+ORDER_TYPE_PRIORITY_BOOST = {
+    "normal": 0.0,
+    "student_urgent": 8.0,
+    "express": 12.0,
+    "travel_emergency": 15.0,
+    "vip": 18.0,
+    "hospital_emergency": 25.0,
+}
+
 
 def calculate_urgency_score(order_data: Dict[str, Any]) -> float:
     """
@@ -31,9 +49,10 @@ def calculate_urgency_score(order_data: Dict[str, Any]) -> float:
     if order_data.get("user_type") == "hospital":
         score += 30.0
 
-    # Order type factor
-    if order_data.get("order_type") == "express":
-        score += 25.0
+    # Order type factor. These values are aligned with the mobile app's
+    # priority options so each choice clearly affects the queue.
+    order_type = str(order_data.get("order_type") or "normal").lower()
+    score += ORDER_TYPE_URGENCY_BONUS.get(order_type, 0.0)
 
     # Peak hours factor (12-2 PM, 7-9 PM)
     hour = datetime.now().hour
@@ -129,6 +148,7 @@ def calculate_priority_score(order_data: Dict[str, Any]) -> Dict[str, float]:
 
     placed_at = order_data.get("placed_at")
     waiting = calculate_waiting_time_score(placed_at) if placed_at else 0.0
+    order_type = str(order_data.get("order_type") or "normal").lower()
 
     # Calculate weighted final score
     final_score = (
@@ -136,6 +156,7 @@ def calculate_priority_score(order_data: Dict[str, Any]) -> Dict[str, float]:
         settings.WEIGHT_DISTANCE * distance +
         settings.WEIGHT_WAITING_TIME * waiting
     )
+    final_score += ORDER_TYPE_PRIORITY_BOOST.get(order_type, 0.0)
 
     return {
         "urgency_score": urgency,

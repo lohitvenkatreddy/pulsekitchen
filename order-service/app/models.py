@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum, Text, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
+from sqlalchemy.types import TypeDecorator
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 import enum
@@ -22,6 +23,31 @@ class PriorityLevel(str, enum.Enum):
     CRITICAL = "critical"
 
 
+class EnumValueString(TypeDecorator):
+    impl = String
+    cache_ok = True
+
+    def __init__(self, enum_cls, *args, **kwargs):
+        self.enum_cls = enum_cls
+        super().__init__(*args, **kwargs)
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, self.enum_cls):
+            return value.value
+        return self.enum_cls(str(value).lower()).value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        normalized = str(value).lower()
+        try:
+            return self.enum_cls(normalized)
+        except ValueError:
+            return self.enum_cls[str(value).upper()]
+
+
 class Coupon(Base):
     __tablename__ = "coupons"
 
@@ -41,6 +67,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True)
+    email = Column(String)
+    full_name = Column(String)
 
 
 class Order(Base):
@@ -57,8 +85,9 @@ class Order(Base):
     delivery_address = Column(Text, nullable=False)  # JSON string with address details
 
     # Priority scoring (store as string to match seeded PostgreSQL schema)
+    order_type = Column(String(50), default="normal")
     priority_level = Column(
-        SQLEnum(PriorityLevel, native_enum=False, length=50),
+        EnumValueString(PriorityLevel, length=50),
         default=PriorityLevel.NORMAL,
     )
     priority_score = Column(Float, default=0.0)
@@ -68,7 +97,7 @@ class Order(Base):
 
     # Status tracking
     status = Column(
-        SQLEnum(OrderStatus, native_enum=False, length=50),
+        EnumValueString(OrderStatus, length=50),
         default=OrderStatus.PENDING,
     )
     special_instructions = Column(Text, nullable=True)

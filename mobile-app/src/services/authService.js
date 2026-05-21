@@ -15,6 +15,11 @@ const authService = {
     return response;
   },
 
+  requestSignupOtp: async ({ email, full_name }) => {
+    const response = await api.post('/auth/register/request-otp', { email, full_name });
+    return response;
+  },
+
   logout: async () => {
     await AsyncStorage.multiRemove(['authToken', 'user']);
   },

@@ -11,6 +11,9 @@ class User(Base):
     full_name = Column(String(255))
     phone_number = Column(String(20))
     role = Column(String(50))
+    approval_status = Column(String(50))
+    approved_by_user_id = Column(Integer)
+    approved_at = Column(DateTime(timezone=True))
     is_active = Column(Boolean)
     is_verified = Column(Boolean)
     created_at = Column(DateTime(timezone=True))
@@ -22,12 +25,17 @@ class Order(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
     restaurant_id = Column(Integer)
+    delivery_partner_id = Column(Integer)
     status = Column(String(50))
     total_amount = Column(Float)
     priority_score = Column(Float)
     priority_level = Column(String(50))
+    special_instructions = Column(Text)
     placed_at = Column(DateTime(timezone=True))
     confirmed_at = Column(DateTime(timezone=True))
+    picked_up_at = Column(DateTime(timezone=True))
+    delivered_at = Column(DateTime(timezone=True))
+    cancelled_at = Column(DateTime(timezone=True))
 
 
 class Restaurant(Base):
@@ -36,6 +44,8 @@ class Restaurant(Base):
     id = Column(Integer, primary_key=True)
     owner_user_id = Column(Integer)
     name = Column(String(255))
+    address = Column(Text)
+    cuisine_type = Column(String(100))
     approval_status = Column(String(50))
     is_open = Column(Boolean)
     is_public = Column(Boolean)
@@ -74,6 +84,7 @@ class Payment(Base):
     total_amount = Column(Numeric(10, 2))
     status = Column(String(50))
     payment_method = Column(String(50))
+    priority_fee = Column(Numeric(10, 2))
     created_at = Column(DateTime(timezone=True))
 
 
@@ -84,4 +95,21 @@ class DeliveryAssignment(Base):
     order_id = Column(Integer)
     delivery_partner_id = Column(Integer)
     status = Column(String(50))
+    assigned_at = Column(DateTime(timezone=True))
+    picked_up_at = Column(DateTime(timezone=True))
+    delivered_at = Column(DateTime(timezone=True))
     eta_minutes = Column(Integer)
+
+
+class DeliveryPartner(Base):
+    __tablename__ = "delivery_partners"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    latitude = Column(Float)
+    longitude = Column(Float)
+    is_available = Column(Boolean)
+    current_order_id = Column(Integer)
+    rating = Column(Float)
+    total_deliveries = Column(Integer)
+    created_at = Column(DateTime(timezone=True))

@@ -17,8 +17,10 @@ npm-debug.log
 yarn-error.log
 
 # React Native
-.mobile-app/.expo/
-.mobile-app/.expo-shared/
+.expo/
+.expo-shared/
+mobile-app/.expo/
+mobile-app/.expo-shared/
 *.jks
 *.p8
 *.p12
@@ -57,3 +59,6 @@ htmlcov/
 tmp/
 temp/
 *.tmp
+
+# Local Netlify folder
+.netlify

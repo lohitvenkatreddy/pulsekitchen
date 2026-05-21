@@ -11,11 +11,29 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchOrderById, cancelOrder } from '../store/slices/orderSlice';
 import { startTracking, stopTracking } from '../store/slices/deliverySlice';
+import { formatCurrency } from '../utils/currency';
+import { getPriorityDisplay } from '../utils/orderPresentation';
+
+const STATUS_RANK = {
+  pending: 0,
+  confirmed: 1,
+  preparing: 2,
+  ready_for_pickup: 3,
+  out_for_delivery: 4,
+  delivered: 5,
+  cancelled: 6,
+};
+
+const latestStatus = (currentStatus, nextStatus) => {
+  const current = String(currentStatus || '').toLowerCase();
+  const next = String(nextStatus || '').toLowerCase();
+  return (STATUS_RANK[current] ?? -1) > (STATUS_RANK[next] ?? -1) ? current : next;
+};
 
 export default function OrderTrackingScreen({ navigation, route }) {
   const dispatch = useDispatch();
   const { currentOrder } = useSelector((state) => state.orders);
-  const { trackingOrder, eta } = useSelector((state) => state.delivery);
+  const { trackingOrder, eta, etaPayload } = useSelector((state) => state.delivery);
   const [order, setOrder] = useState(null);
 
   useEffect(() => {
@@ -32,19 +50,26 @@ export default function OrderTrackingScreen({ navigation, route }) {
         dispatch(stopTracking());
       };
     }
-  }, []);
+  }, [route.params?.orderId, currentOrder?.id, dispatch]);
 
   useEffect(() => {
     const merged = { ...(currentOrder || {}), ...(trackingOrder || {}) };
     if (merged.id) {
-      setOrder(merged);
+      setOrder((previousOrder) => ({
+        ...(previousOrder || {}),
+        ...merged,
+        status: latestStatus(
+          latestStatus(previousOrder?.status, currentOrder?.status),
+          trackingOrder?.status || merged.status
+        ),
+      }));
     }
   }, [trackingOrder, currentOrder]);
 
   if (!order) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF6B35" />
+        <ActivityIndicator size="large" color="#000" />
         <Text style={styles.loadingText}>Loading order details...</Text>
       </View>
     );
@@ -77,25 +102,44 @@ export default function OrderTrackingScreen({ navigation, route }) {
   };
 
   const priorityColors = {
+    hospital_emergency: '#f44336',
+    vip: '#9C27B0',
+    travel_emergency: '#FF9800',
+    student_urgent: '#2196F3',
     critical: '#FF0000',
-    high: '#FF6B35',
+    high: '#000',
     normal: '#4CAF50',
     low: '#9E9E9E',
   };
-
   const statusKey = String(order.status ?? 'pending');
-  const priorityKey = String(order.priority_level ?? 'normal').toLowerCase();
-  const scoreNum = Number(order.priority_score);
-  const scoreLabel = Number.isFinite(scoreNum) ? scoreNum.toFixed(1) : '—';
+  const priorityType = String(order.order_type || order.priority_type || 'normal').toLowerCase();
+  const priorityLevel = String(order.priority_level ?? 'normal').toLowerCase();
+  const priorityLabel = getPriorityDisplay(order);
+  const etaMinutes = Number(eta);
+  const hasEta = Number.isFinite(etaMinutes) && etaMinutes > 0;
+  const standardEtaMinutes = Number(etaPayload?.standard_eta_minutes ?? order.standard_eta_minutes);
+  const etaSavingsMinutes = Number(etaPayload?.eta_savings_minutes ?? order.eta_savings_minutes);
+  const hasPrioritySavings =
+    Number.isFinite(standardEtaMinutes) &&
+    Number.isFinite(etaSavingsMinutes) &&
+    standardEtaMinutes > etaMinutes &&
+    etaSavingsMinutes > 0;
+  const handleBackPress = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate('Main', { screen: 'Home' });
+  };
 
   return (
     <ScrollView style={styles.container}>
       {/* Priority Badge */}
-      <View style={[styles.priorityBadge, { backgroundColor: priorityColors[priorityKey] || '#9E9E9E' }]}>
+      <View style={[styles.priorityBadge, { backgroundColor: priorityColors[priorityType] || priorityColors[priorityLevel] || '#9E9E9E' }]}>
         <Text style={styles.priorityText}>
-          {priorityKey.toUpperCase()} PRIORITY
+          {priorityLabel.toUpperCase()} PRIORITY
         </Text>
-        <Text style={styles.priorityScore}>Score: {scoreLabel}</Text>
       </View>
 
       {/* Status Header */}
@@ -103,14 +147,6 @@ export default function OrderTrackingScreen({ navigation, route }) {
         <Text style={styles.statusIcon}>{getStatusIcon(statusKey)}</Text>
         <Text style={styles.statusTitle}>{statusKey.replace(/_/g, ' ').toUpperCase()}</Text>
         <Text style={styles.statusMessage}>{getStatusMessage(statusKey)}</Text>
-      </View>
-
-      {/* Map: native MapView is omitted here — it often crashes in Expo Go without extra native / API setup */}
-      <View style={styles.mapContainer}>
-        <View style={styles.mapPlaceholder}>
-          <Text style={styles.mapPlaceholderText}>Delivery map</Text>
-          <Text style={styles.mapPlaceholderSub}>Route preview (enable a dev build + maps config for live map)</Text>
-        </View>
       </View>
 
       {/* Order Details */}
@@ -125,7 +161,7 @@ export default function OrderTrackingScreen({ navigation, route }) {
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Total Amount:</Text>
           <Text style={styles.detailValue}>
-            ${Number.isFinite(Number(order.total_amount)) ? Number(order.total_amount).toFixed(2) : '—'}
+            {Number.isFinite(Number(order.total_amount)) ? formatCurrency(order.total_amount) : '—'}
           </Text>
         </View>
 
@@ -136,10 +172,19 @@ export default function OrderTrackingScreen({ navigation, route }) {
           </Text>
         </View>
 
-        {eta && (
-          <View style={styles.etaRow}>
-            <Text style={styles.etaLabel}>Estimated Delivery:</Text>
-            <Text style={styles.etaValue}>{eta} mins</Text>
+        {hasEta && (
+          <View style={styles.etaCard}>
+            <View style={styles.etaRow}>
+              <Text style={styles.etaLabel}>
+                {hasPrioritySavings ? 'Priority ETA:' : 'Estimated Delivery:'}
+              </Text>
+              <Text style={styles.etaValue}>{etaMinutes} mins</Text>
+            </View>
+            {hasPrioritySavings && (
+              <Text style={styles.etaSavings}>
+                Standard ETA {standardEtaMinutes} mins - saved {etaSavingsMinutes} mins
+              </Text>
+            )}
           </View>
         )}
       </View>
@@ -163,7 +208,7 @@ export default function OrderTrackingScreen({ navigation, route }) {
 
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => navigation.goBack()}
+        onPress={handleBackPress}
       >
         <Text style={styles.backButtonText}>Back to Home</Text>
       </TouchableOpacity>
@@ -196,12 +241,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  priorityScore: {
-    color: '#fff',
-    fontSize: 14,
-    opacity: 0.9,
-    marginTop: 4,
-  },
   statusHeader: {
     backgroundColor: '#fff',
     padding: 20,
@@ -221,31 +260,6 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
     textAlign: 'center',
-  },
-  mapContainer: {
-    height: 200,
-    margin: 15,
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 3,
-  },
-  mapPlaceholder: {
-    flex: 1,
-    backgroundColor: '#E8EAF6',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  mapPlaceholderText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#3949AB',
-  },
-  mapPlaceholderSub: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 8,
   },
   detailsCard: {
     backgroundColor: '#fff',
@@ -276,24 +290,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  etaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  etaCard: {
     paddingVertical: 15,
-    backgroundColor: '#FFF3E0',
+    backgroundColor: '#f2f2f2',
     borderRadius: 8,
     paddingHorizontal: 10,
     marginTop: 10,
   },
+  etaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   etaLabel: {
-    color: '#FF6B35',
+    color: '#000',
     fontSize: 14,
     fontWeight: '600',
   },
   etaValue: {
-    color: '#FF6B35',
+    color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  etaSavings: {
+    color: '#4CAF50',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
   },
   cancelButton: {
     backgroundColor: '#f44336',

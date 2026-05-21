@@ -1,7 +1,10 @@
 from pathlib import Path
+import json
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import Optional
 
@@ -78,6 +81,7 @@ def add_menu_item(
         restaurant_id=restaurant_id,
         name=item.name,
         description=item.description,
+        image_url=item.image_url,
         price=item.price,
         is_available=item.is_available,
     )
@@ -111,6 +115,126 @@ def update_menu_item(
     db.commit()
     db.refresh(m)
     return m
+
+
+@router.get("/{restaurant_id}/menu", response_model=list[schemas.MenuItemResponse])
+def get_partner_menu(
+    restaurant_id: int,
+    db: Session = Depends(database.get_db),
+    payload: dict = Depends(require_restaurant_or_admin),
+):
+    _get_restaurant_for_actor(db, restaurant_id, payload)
+    items = (
+        db.query(models.MenuItem)
+        .filter(models.MenuItem.restaurant_id == restaurant_id)
+        .order_by(models.MenuItem.name)
+        .all()
+    )
+    return items
+
+
+@router.get("/{restaurant_id}/orders")
+def get_restaurant_orders(
+    restaurant_id: int,
+    db: Session = Depends(database.get_db),
+    payload: dict = Depends(require_restaurant_or_admin),
+):
+    _get_restaurant_for_actor(db, restaurant_id, payload)
+    rows = (
+        db.query(models.Order)
+        .filter(models.Order.restaurant_id == restaurant_id)
+        .order_by(models.Order.placed_at.desc())
+        .limit(100)
+        .all()
+    )
+    return {
+        "orders": [
+            {
+                "id": o.id,
+                "user_id": o.user_id,
+                "items": json.loads(o.items or "[]"),
+                "total_amount": float(o.total_amount or 0),
+                "delivery_address": o.delivery_address,
+                "priority_level": o.priority_level,
+                "priority_score": float(o.priority_score or 0),
+                "status": o.status,
+                "special_instructions": o.special_instructions,
+                "delivery_partner_id": o.delivery_partner_id,
+                "placed_at": o.placed_at.isoformat() if o.placed_at else None,
+            }
+            for o in rows
+        ]
+    }
+
+
+@router.get("/{restaurant_id}/revenue")
+def get_restaurant_revenue(
+    restaurant_id: int,
+    db: Session = Depends(database.get_db),
+    payload: dict = Depends(require_restaurant_or_admin),
+):
+    _get_restaurant_for_actor(db, restaurant_id, payload)
+    completed_statuses = ["completed"]
+    rows = (
+        db.query(models.Payment, models.Order)
+        .join(models.Order, models.Payment.order_id == models.Order.id)
+        .filter(
+            models.Order.restaurant_id == restaurant_id,
+            func.lower(models.Payment.status).in_(completed_statuses),
+        )
+        .all()
+    )
+
+    gross_revenue = sum(float(payment.total_amount or 0) for payment, _order in rows)
+    admin_commission = round(gross_revenue * 0.02, 2)
+    owner_payout = round(gross_revenue - admin_commission, 2)
+    delivered_orders = sum(1 for _payment, order in rows if str(order.status).lower() == "delivered")
+
+    return {
+        "gross_revenue": round(gross_revenue, 2),
+        "admin_commission_rate": 0.02,
+        "admin_commission": admin_commission,
+        "owner_payout": owner_payout,
+        "paid_orders": len(rows),
+        "delivered_orders": delivered_orders,
+    }
+
+
+@router.patch("/{restaurant_id}/orders/{order_id}/status")
+def update_restaurant_order_status(
+    restaurant_id: int,
+    order_id: int,
+    body: dict,
+    db: Session = Depends(database.get_db),
+    payload: dict = Depends(require_restaurant_or_admin),
+):
+    _get_restaurant_for_actor(db, restaurant_id, payload)
+    row = (
+        db.query(models.Order)
+        .filter(models.Order.id == order_id, models.Order.restaurant_id == restaurant_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    new_status = str(body.get("status") or "").lower()
+    allowed = {"confirmed", "preparing", "ready_for_pickup"}
+    if new_status not in allowed:
+        raise HTTPException(status_code=400, detail="Unsupported restaurant order status")
+
+    current_status = str(row.status or "").lower()
+    if current_status in {"out_for_delivery", "delivered", "cancelled"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Order status is already controlled by delivery progress",
+        )
+
+    row.status = new_status
+    if new_status in {"confirmed", "preparing", "ready_for_pickup"} and not row.confirmed_at:
+        row.confirmed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return {"id": row.id, "status": row.status}
 
 
 @router.delete("/{restaurant_id}/menu/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

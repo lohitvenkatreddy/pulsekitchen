@@ -1,0 +1,137 @@
+envVarGroups:
+  - name: pulsekitchen-shared
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: RABBITMQ_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+
+services:
+  - type: web
+    name: pulsekitchen-auth-service
+    runtime: docker
+    rootDir: auth-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: BREVO_SENDER_NAME
+        value: PulseKitchen
+      - key: SIGNUP_OTP_TTL_MINUTES
+        value: "10"
+      - key: SIGNUP_OTP_RESEND_COOLDOWN_SECONDS
+        value: "60"
+      - key: SIGNUP_OTP_MAX_ATTEMPTS
+        value: "5"
+
+  - type: web
+    name: pulsekitchen-user-service
+    runtime: docker
+    rootDir: user-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+
+  - type: web
+    name: pulsekitchen-restaurant-service
+    runtime: docker
+    rootDir: restaurant-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+
+  - type: web
+    name: pulsekitchen-order-service
+    runtime: docker
+    rootDir: order-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: EMERGENCY_VERIFICATION_MODE
+        value: auto
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        sync: false
+      - key: BREVO_SENDER_NAME
+        value: PulseKitchen
+
+  - type: web
+    name: pulsekitchen-delivery-service
+    runtime: docker
+    rootDir: delivery-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: GOOGLE_DISTANCE_MATRIX_URL
+        value: https://maps.googleapis.com/maps/api/distancematrix/json
+      - key: OSRM_ROUTE_URL
+        value: https://router.project-osrm.org/route/v1/driving
+      - key: ROUTING_TIMEOUT_SECONDS
+        value: "4"
+
+  - type: web
+    name: pulsekitchen-payment-service
+    runtime: docker
+    rootDir: payment-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+
+  - type: web
+    name: pulsekitchen-notification-service
+    runtime: docker
+    rootDir: notification-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+
+  - type: web
+    name: pulsekitchen-admin-service
+    runtime: docker
+    rootDir: admin-service
+    healthCheckPath: /health
+    envVars:
+      - fromGroup: pulsekitchen-shared
+
+  - type: web
+    name: pulsekitchen-api-gateway
+    runtime: docker
+    rootDir: api-gateway
+    healthCheckPath: /health
+    envVars:
+      - key: AUTH_SERVICE_URL
+        sync: false
+      - key: USER_SERVICE_URL
+        sync: false
+      - key: RESTAURANT_SERVICE_URL
+        sync: false
+      - key: ORDER_SERVICE_URL
+        sync: false
+      - key: DELIVERY_SERVICE_URL
+        sync: false
+      - key: PAYMENT_SERVICE_URL
+        sync: false
+      - key: NOTIFICATION_SERVICE_URL
+        sync: false
+      - key: ADMIN_SERVICE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

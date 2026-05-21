@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterChipActive: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#000',
   },
   filterText: {
     color: '#666',
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   },
   restaurantCuisine: {
     fontSize: 14,
-    color: '#FF6B35',
+    color: '#000',
     marginTop: 4,
   },
   restaurantAddress: {

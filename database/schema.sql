@@ -12,10 +12,25 @@ CREATE TABLE users (
     full_name VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20),
     role VARCHAR(50) DEFAULT 'customer',
+    approval_status VARCHAR(50) DEFAULT 'approved',
+    approved_by_user_id INTEGER,
+    approved_at TIMESTAMP WITH TIME ZONE,
     is_active BOOLEAN DEFAULT TRUE,
     is_verified BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Signup email OTPs for customer account creation
+CREATE TABLE signup_email_otps (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    otp_hash VARCHAR(255) NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    is_used BOOLEAN DEFAULT FALSE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Restaurants table
@@ -60,6 +75,7 @@ CREATE TABLE orders (
     delivery_address TEXT NOT NULL,  -- JSON string with address details
 
     -- Priority scoring (THE KEY FEATURE)
+    order_type VARCHAR(50) DEFAULT 'normal',
     priority_level VARCHAR(50) DEFAULT 'normal',
     priority_score DECIMAL(5, 2) DEFAULT 0.00,
     urgency_score DECIMAL(5, 2) DEFAULT 0.00,
@@ -97,7 +113,7 @@ CREATE TABLE payments (
     order_id INTEGER UNIQUE NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     amount DECIMAL(10, 2) NOT NULL,
-    currency VARCHAR(10) DEFAULT 'USD',
+    currency VARCHAR(10) DEFAULT 'INR',
     payment_method VARCHAR(50) NOT NULL,
     priority_fee DECIMAL(10, 2) DEFAULT 0,
     total_amount DECIMAL(10, 2) NOT NULL,
@@ -214,6 +230,41 @@ CREATE TABLE user_addresses (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- App settings and user preferences
+CREATE TABLE user_settings (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    push_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    sms_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    email_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    share_location BOOLEAN NOT NULL DEFAULT FALSE,
+    share_analytics BOOLEAN NOT NULL DEFAULT FALSE,
+    marketing_communications BOOLEAN NOT NULL DEFAULT FALSE,
+    language VARCHAR(10) NOT NULL DEFAULT 'en',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Customer support
+CREATE TABLE support_requests (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subject VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    attachment_name VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'open',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE issue_reports (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    issue_type VARCHAR(80) NOT NULL,
+    description TEXT NOT NULL,
+    screenshot_name VARCHAR(255),
+    status VARCHAR(50) NOT NULL DEFAULT 'open',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Promotional coupons
 CREATE TABLE coupons (
     id SERIAL PRIMARY KEY,
@@ -254,6 +305,9 @@ CREATE INDEX idx_restaurants_cuisine ON restaurants(cuisine_type);
 CREATE INDEX idx_payments_order_id ON payments(order_id);
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_user_addresses_user_id ON user_addresses(user_id);
+CREATE INDEX idx_user_settings_user_id ON user_settings(user_id);
+CREATE INDEX idx_support_requests_user_id ON support_requests(user_id);
+CREATE INDEX idx_issue_reports_user_id ON issue_reports(user_id);
 CREATE INDEX idx_audit_logs_created ON audit_logs(created_at DESC);
 CREATE INDEX idx_restaurants_owner ON restaurants(owner_user_id);
 CREATE INDEX idx_coupons_code ON coupons(code);
@@ -268,10 +322,10 @@ INSERT INTO users (email, password_hash, full_name, phone_number, role, is_verif
 
 -- owner_user_id: 2 = restaurant@test.com for Pizza Palace
 INSERT INTO restaurants (owner_user_id, name, address, latitude, longitude, cuisine_type, rating, review_count, approval_status, is_active, is_open, is_public) VALUES
-(2, 'Pizza Palace', '123 Main St, City', 37.7749, -122.4194, 'Italian', 4.5, 0, 'approved', TRUE, TRUE, TRUE),
-(NULL, 'Burger House', '456 Oak Ave, City', 37.7849, -122.4094, 'American', 4.2, 0, 'approved', TRUE, TRUE, TRUE),
-(NULL, 'Taco Fiesta', '789 Pine Rd, City', 37.7649, -122.4294, 'Mexican', 4.7, 0, 'pending', TRUE, TRUE, TRUE),
-(NULL, 'Dragon Wok', '321 Elm St, City', 37.7949, -122.3994, 'Chinese', 4.3, 0, 'approved', TRUE, FALSE, TRUE);
+(2, 'Pizza Palace', 'Kasavanahalli, Bengaluru', 12.8996, 77.6757, 'Italian', 4.5, 0, 'approved', TRUE, TRUE, TRUE),
+(NULL, 'Burger House', 'Haralur Road, Bengaluru', 12.9008, 77.6674, 'American', 4.2, 0, 'approved', TRUE, TRUE, TRUE),
+(NULL, 'Taco Fiesta', 'Sarjapur Road, Bengaluru', 12.9081, 77.6815, 'Mexican', 4.7, 0, 'pending', TRUE, TRUE, TRUE),
+(NULL, 'Dragon Wok', 'Bellandur, Bengaluru', 12.9296, 77.6762, 'Chinese', 4.3, 0, 'approved', TRUE, FALSE, TRUE);
 
 INSERT INTO menu_items (restaurant_id, name, description, price) VALUES
 (1, 'Margherita Pizza', 'Classic tomato and mozzarella', 12.99),

@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Enum as SQLEnum, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Text, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 import enum
 from .database import Base
 
@@ -22,6 +23,43 @@ class PaymentStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class EnumValueString(TypeDecorator):
+    impl = String
+    cache_ok = True
+
+    def __init__(self, enum_cls, *args, **kwargs):
+        self.enum_cls = enum_cls
+        super().__init__(*args, **kwargs)
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, self.enum_cls):
+            return value.value
+        return self.enum_cls(str(value).lower()).value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        normalized = str(value).lower()
+        try:
+            return self.enum_cls(normalized)
+        except ValueError:
+            return self.enum_cls[str(value).upper()]
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True)
+
+
 class Payment(Base):
     __tablename__ = "payments"
 
@@ -31,15 +69,15 @@ class Payment(Base):
 
     # Payment details
     amount = Column(Float, nullable=False)
-    currency = Column(String, default="USD")
-    payment_method = Column(SQLEnum(PaymentMethod), nullable=False)
+    currency = Column(String, default="INR")
+    payment_method = Column(EnumValueString(PaymentMethod, length=50), nullable=False)
 
     # Priority delivery fee
     priority_fee = Column(Float, default=0.0)
     total_amount = Column(Float, nullable=False)
 
     # Status
-    status = Column(SQLEnum(PaymentStatus), default=PaymentStatus.PENDING)
+    status = Column(EnumValueString(PaymentStatus, length=50), default=PaymentStatus.PENDING)
     transaction_id = Column(String, unique=True)
     gateway_response = Column(Text)  # JSON response from payment gateway
 
@@ -72,7 +110,7 @@ class SavedPaymentMethod(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    method_type = Column(SQLEnum(PaymentMethod), nullable=False)
+    method_type = Column(EnumValueString(PaymentMethod, length=50), nullable=False)
 
     # Card details (tokenized - never store full card number)
     card_last_four = Column(String(4))
